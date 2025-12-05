@@ -124,6 +124,7 @@ function prepareCodeForRendering(code: string, language: string): string {
 export default function CodeRenderer({ code, language }: CodeRendererProps) {
   const [showRendered, setShowRendered] = useState(true);
   const [renderKey, setRenderKey] = useState(0);
+  const [iframeHeight, setIframeHeight] = useState(400);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const isRenderable = isRenderableCode(code, language);
@@ -138,6 +139,20 @@ export default function CodeRenderer({ code, language }: CodeRendererProps) {
         doc.open();
         doc.write(renderedCode);
         doc.close();
+
+        // Adjust iframe height based on content
+        const adjustHeight = () => {
+          try {
+            const contentHeight = doc.body?.scrollHeight || 400;
+            setIframeHeight(Math.max(contentHeight + 20, 300)); // Min 300px
+          } catch (e) {
+            // Cross-origin or other errors - use default height
+            setIframeHeight(400);
+          }
+        };
+
+        // Adjust height after a short delay to allow content to render
+        setTimeout(adjustHeight, 100);
       }
     }
   }, [code, language, showRendered, isRenderable, renderKey]);
@@ -217,8 +232,7 @@ export default function CodeRenderer({ code, language }: CodeRendererProps) {
               sandbox="allow-scripts"
               className="w-full border-0"
               style={{
-                minHeight: '300px',
-                height: 'auto',
+                height: `${iframeHeight}px`,
                 display: 'block'
               }}
               title="Rendered output"
