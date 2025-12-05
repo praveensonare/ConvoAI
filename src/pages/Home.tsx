@@ -1,7 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Send, Paperclip, Image as ImageIcon, X } from 'lucide-react';
 import { sendMessageStream, fileToBase64 } from '../services/claude';
 import MessageContent from '../components/MessageContent';
+import {
+  createConversation,
+  getConversation,
+  updateConversation,
+  setCurrentConversationId,
+  getCurrentConversationId,
+} from '../services/conversationStorage';
 
 interface Attachment {
   type: 'image' | 'document';
@@ -20,6 +28,8 @@ interface Message {
 }
 
 export default function Home() {
+  const [searchParams] = useSearchParams();
+  const [currentConversationId, setCurrentConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -30,6 +40,53 @@ export default function Home() {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  // Load or create conversation on mount and when URL changes
+  useEffect(() => {
+    const convIdFromUrl = searchParams.get('conv');
+
+    if (convIdFromUrl) {
+      // Load existing conversation
+      const conversation = getConversation(convIdFromUrl);
+      if (conversation) {
+        setCurrentConvId(convIdFromUrl);
+        setCurrentConversationId(convIdFromUrl);
+        setMessages(conversation.messages);
+      } else {
+        // Conversation not found, create new one
+        const newConv = createConversation();
+        setCurrentConvId(newConv.id);
+        setMessages([]);
+      }
+    } else {
+      // Check if there's a current conversation in storage
+      const storedConvId = getCurrentConversationId();
+      if (storedConvId) {
+        const conversation = getConversation(storedConvId);
+        if (conversation) {
+          setCurrentConvId(storedConvId);
+          setMessages(conversation.messages);
+        } else {
+          // Create new conversation
+          const newConv = createConversation();
+          setCurrentConvId(newConv.id);
+          setMessages([]);
+        }
+      } else {
+        // Create new conversation
+        const newConv = createConversation();
+        setCurrentConvId(newConv.id);
+        setMessages([]);
+      }
+    }
+  }, [searchParams]);
+
+  // Save conversation when messages change
+  useEffect(() => {
+    if (currentConversationId && messages.length > 0) {
+      updateConversation(currentConversationId, { messages });
+    }
+  }, [messages, currentConversationId]);
 
   useEffect(() => {
     scrollToBottom();

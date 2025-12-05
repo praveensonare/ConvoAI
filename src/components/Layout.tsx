@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Home, Brain, BookOpen, Settings, User, LogOut, Menu, X } from 'lucide-react';
+import ConversationList from './ConversationList';
+import { getCurrentConversationId } from '../services/conversationStorage';
 
 export default function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [currentConvId, setCurrentConvId] = useState<string | null>(
+    getCurrentConversationId()
+  );
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -23,6 +28,18 @@ export default function Layout() {
   const handleLogout = () => {
     localStorage.clear();
     navigate('/login');
+  };
+
+  const handleSelectConversation = (conversationId: string) => {
+    setCurrentConvId(conversationId);
+    // Navigate to home with conversation ID in query param
+    navigate(`/?conv=${conversationId}`);
+  };
+
+  const handleNewConversation = () => {
+    setCurrentConvId(null);
+    // Navigate to home without conversation ID to create new
+    navigate('/');
   };
 
   return (
@@ -52,7 +69,7 @@ export default function Layout() {
             </div>
           </div>
 
-          <nav className="flex-1 space-y-2">
+          <nav className="space-y-2 mb-6">
             {navItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
@@ -71,6 +88,20 @@ export default function Layout() {
               );
             })}
           </nav>
+
+          {/* My Conversations Section */}
+          {location.pathname === '/' && (
+            <div className="flex-1 overflow-y-auto">
+              <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-4 mb-3">
+                My Conversations
+              </h2>
+              <ConversationList
+                onSelectConversation={handleSelectConversation}
+                onNewConversation={handleNewConversation}
+                currentConversationId={currentConvId}
+              />
+            </div>
+          )}
         </div>
 
         <div className="p-4 border-t border-slate-200 relative">
