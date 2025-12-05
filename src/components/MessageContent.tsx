@@ -104,7 +104,7 @@ export default function MessageContent({ content, attachments }: MessageContentP
   }, [content]);
 
   return (
-    <div className="message-content">
+    <div className="message-content w-full overflow-hidden">
       {/* Render attachments first */}
       {attachments && attachments.length > 0 && (
         <div className="attachments mb-3">

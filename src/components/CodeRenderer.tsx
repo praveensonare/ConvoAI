@@ -153,8 +153,8 @@ export default function CodeRenderer({ code, language }: CodeRendererProps) {
   // If not renderable, show regular code block
   if (!isRenderable) {
     return (
-      <div className="my-3">
-        <div className="bg-slate-900 rounded-lg overflow-hidden">
+      <div className="my-3 w-full">
+        <div className="bg-slate-900 rounded-lg overflow-hidden w-full">
           {language && (
             <div className="px-4 py-2 bg-slate-800 text-slate-300 text-xs font-mono">
               {language}
@@ -172,8 +172,8 @@ export default function CodeRenderer({ code, language }: CodeRendererProps) {
 
   // Renderable code with toggle
   return (
-    <div className="my-3">
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+    <div className="my-3 w-full">
+      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden w-full">
         {/* Header with controls */}
         <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -214,15 +214,17 @@ export default function CodeRenderer({ code, language }: CodeRendererProps) {
 
         {/* Content area */}
         {showRendered ? (
-          <div className="relative bg-white">
+          <div className="relative bg-white overflow-auto w-full" style={{ maxHeight: '600px' }}>
             <iframe
               ref={iframeRef}
               key={renderKey}
               sandbox="allow-scripts"
               className="w-full border-0"
               style={{
-                height: `${iframeHeight}px`,
-                display: 'block'
+                height: `${Math.min(iframeHeight, 600)}px`,
+                display: 'block',
+                maxHeight: '600px',
+                position: 'relative'
               }}
               title="Rendered output"
             />
