@@ -34,12 +34,16 @@ export default function Layout() {
     setCurrentConvId(conversationId);
     // Navigate to home with conversation ID in query param
     navigate(`/?conv=${conversationId}`);
+    // Close sidebar on mobile
+    setIsSidebarOpen(false);
   };
 
   const handleNewConversation = () => {
     setCurrentConvId(null);
     // Navigate to home without conversation ID to create new
-    navigate('/');
+    navigate('/?new=true');
+    // Close sidebar on mobile
+    setIsSidebarOpen(false);
   };
 
   return (

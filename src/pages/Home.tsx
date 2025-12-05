@@ -45,6 +45,7 @@ export default function Home() {
   // Load or create conversation on mount and when URL changes
   useEffect(() => {
     const convIdFromUrl = searchParams.get('conv');
+    const isNewConversation = searchParams.get('new') === 'true';
 
     if (convIdFromUrl) {
       // Load existing conversation
@@ -59,6 +60,11 @@ export default function Home() {
         setCurrentConvId(newConv.id);
         setMessages([]);
       }
+    } else if (isNewConversation) {
+      // Explicitly creating a new conversation
+      const newConv = createConversation();
+      setCurrentConvId(newConv.id);
+      setMessages([]);
     } else {
       // Check if there's a current conversation in storage
       const storedConvId = getCurrentConversationId();
