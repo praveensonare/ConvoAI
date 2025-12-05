@@ -1,17 +1,40 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, Image as ImageIcon } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Send, Paperclip, X } from 'lucide-react';
+import { sendMessageStream, sendMessage, fileToBase64 } from '../services/claude';
+import MessageContent from '../components/MessageContent';
+import {
+  createConversation,
+  getConversation,
+  updateConversation,
+  setCurrentConversationId,
+  getCurrentConversationId,
+} from '../services/conversationStorage';
+
+interface Attachment {
+  type: 'image' | 'document';
+  url: string;
+  file?: File;
+  fileName?: string;
+}
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  attachments?: Attachment[];
+  isStreaming?: boolean;
 }
 
 export default function Home() {
+  const [searchParams] = useSearchParams();
+  const [currentConversationId, setCurrentConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false); // Streaming disabled by default
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -19,34 +42,245 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Load or create conversation on mount and when URL changes
+  useEffect(() => {
+    const convIdFromUrl = searchParams.get('conv');
+    const isNewConversation = searchParams.get('new') === 'true';
+
+    if (convIdFromUrl) {
+      // Load existing conversation
+      const conversation = getConversation(convIdFromUrl);
+      if (conversation) {
+        setCurrentConvId(convIdFromUrl);
+        setCurrentConversationId(convIdFromUrl);
+        setMessages(conversation.messages);
+      } else {
+        // Conversation not found, create new one
+        const newConv = createConversation();
+        setCurrentConvId(newConv.id);
+        setMessages([]);
+      }
+    } else if (isNewConversation) {
+      // Explicitly creating a new conversation
+      const newConv = createConversation();
+      setCurrentConvId(newConv.id);
+      setMessages([]);
+    } else {
+      // Check if there's a current conversation in storage
+      const storedConvId = getCurrentConversationId();
+      if (storedConvId) {
+        const conversation = getConversation(storedConvId);
+        if (conversation) {
+          setCurrentConvId(storedConvId);
+          setMessages(conversation.messages);
+        } else {
+          // Create new conversation
+          const newConv = createConversation();
+          setCurrentConvId(newConv.id);
+          setMessages([]);
+        }
+      } else {
+        // Create new conversation
+        const newConv = createConversation();
+        setCurrentConvId(newConv.id);
+        setMessages([]);
+      }
+    }
+  }, [searchParams]);
+
+  // Save conversation when messages change
+  useEffect(() => {
+    if (currentConversationId && messages.length > 0) {
+      updateConversation(currentConversationId, { messages });
+    }
+  }, [messages, currentConversationId]);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const newAttachments: Attachment[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const url = URL.createObjectURL(file);
+
+      if (file.type.startsWith('image/')) {
+        newAttachments.push({
+          type: 'image',
+          url,
+          file,
+          fileName: file.name,
+        });
+      } else if (file.type === 'application/pdf') {
+        newAttachments.push({
+          type: 'document',
+          url,
+          file,
+          fileName: file.name,
+        });
+      }
+    }
+
+    setAttachments((prev) => [...prev, ...newAttachments]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => {
+      const newAttachments = [...prev];
+      // Revoke object URL to free memory
+      URL.revokeObjectURL(newAttachments[index].url);
+      newAttachments.splice(index, 1);
+      return newAttachments;
+    });
+  };
+
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() && attachments.length === 0) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
       content: input,
       timestamp: new Date(),
+      attachments: attachments.length > 0 ? [...attachments] : undefined,
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
+    setAttachments([]);
     setIsLoading(true);
 
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+    // Create placeholder for assistant message
+    const assistantMessageId = (Date.now() + 1).toString();
+
+    try {
+      // Convert messages to format expected by Claude API
+      const conversationHistory = [...messages, userMessage].map(async (msg) => {
+        // If message has image attachments, convert them
+        if (msg.attachments && msg.attachments.length > 0) {
+          const contentParts: any[] = [{ type: 'text', text: msg.content }];
+
+          for (const attachment of msg.attachments) {
+            if (attachment.type === 'image' && attachment.file) {
+              try {
+                const base64Data = await fileToBase64(attachment.file);
+                contentParts.push({
+                  type: 'image',
+                  source: {
+                    type: 'base64',
+                    media_type: attachment.file.type,
+                    data: base64Data,
+                  },
+                });
+              } catch (error) {
+                console.error('Error converting image to base64:', error);
+              }
+            }
+          }
+
+          return {
+            role: msg.role,
+            content: contentParts,
+          };
+        }
+
+        return {
+          role: msg.role,
+          content: msg.content,
+        };
+      });
+
+      const resolvedHistory = await Promise.all(conversationHistory);
+
+      if (isStreaming) {
+        // Streaming mode: Add placeholder and stream response
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: assistantMessageId,
+            role: 'assistant',
+            content: '',
+            timestamp: new Date(),
+            isStreaming: true,
+          },
+        ]);
+
+        await sendMessageStream(
+          resolvedHistory,
+          // onChunk: Append text as it arrives
+          (chunk: string) => {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? { ...msg, content: msg.content + chunk }
+                  : msg
+              )
+            );
+          },
+          // onComplete: Mark streaming as complete
+          () => {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? { ...msg, isStreaming: false }
+                  : msg
+              )
+            );
+            setIsLoading(false);
+          },
+          // onError: Display error
+          (error: string) => {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? {
+                      ...msg,
+                      content: `Error: ${error}`,
+                      isStreaming: false,
+                    }
+                  : msg
+              )
+            );
+            setIsLoading(false);
+          }
+        );
+      } else {
+        // Non-streaming mode: Wait for full response
+        const response = await sendMessage(resolvedHistory);
+
+        const assistantMessage: Message = {
+          id: assistantMessageId,
+          role: 'assistant',
+          content: response.error || response.content || 'No response received.',
+          timestamp: new Date(),
+        };
+
+        setMessages((prev) => [...prev, assistantMessage]);
+        setIsLoading(false);
+      }
+    } catch (error) {
+      // Handle any unexpected errors
+      const errorMessage: Message = {
+        id: assistantMessageId,
         role: 'assistant',
-        content: 'This is a demo response. Connect your API token in Settings to enable real AI responses.',
+        content: `Error: ${
+          error instanceof Error
+            ? error.message
+            : 'An unexpected error occurred.'
+        }`,
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -60,13 +294,6 @@ export default function Home() {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setInput((prev) => `${prev}\n[File attached: ${file.name}]`);
-    }
-  };
-
   return (
     <div className="flex flex-col h-full bg-white">
       <div className="flex-1 overflow-y-auto px-4 py-8">
@@ -75,13 +302,27 @@ export default function Home() {
             <div className="flex items-center justify-center h-full">
               <div className="text-center space-y-4">
                 <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-2xl">
-                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                  <svg
+                    className="w-10 h-10 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+                    />
                   </svg>
                 </div>
-                <h2 className="text-2xl font-bold text-slate-800">Welcome to ConvoAI</h2>
+                <h2 className="text-2xl font-bold text-slate-800">
+                  Welcome to ConvoAI
+                </h2>
                 <p className="text-slate-600 max-w-md mx-auto">
-                  Start a conversation to experience AI-powered assistance. Configure your settings to connect to your preferred AI service.
+                  Start a conversation with Claude. Upload images, documents, or
+                  ask for visualizations and charts. Your AI assistant is ready to
+                  help!
                 </p>
               </div>
             </div>
@@ -90,7 +331,9 @@ export default function Home() {
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${
+                    message.role === 'user' ? 'justify-end' : 'justify-start'
+                  }`}
                 >
                   <div
                     className={`max-w-[80%] rounded-2xl px-6 py-4 shadow-md ${
@@ -102,14 +345,32 @@ export default function Home() {
                     <div className="flex items-start gap-3">
                       {message.role === 'assistant' && (
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 mt-1">
-                          <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <svg
+                            className="w-4 h-4 text-white"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
                             <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
                           </svg>
                         </div>
                       )}
                       <div className="flex-1">
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                        <p className={`text-xs mt-2 ${message.role === 'user' ? 'text-blue-100' : 'text-slate-400'}`}>
+                        <div className="text-sm leading-relaxed">
+                          <MessageContent
+                            content={message.content}
+                            attachments={message.attachments}
+                          />
+                          {message.isStreaming && (
+                            <span className="inline-block w-2 h-4 bg-current animate-pulse ml-1" />
+                          )}
+                        </div>
+                        <p
+                          className={`text-xs mt-2 ${
+                            message.role === 'user'
+                              ? 'text-blue-100'
+                              : 'text-slate-400'
+                          }`}
+                        >
                           {message.timestamp.toLocaleTimeString()}
                         </p>
                       </div>
@@ -117,17 +378,6 @@ export default function Home() {
                   </div>
                 </div>
               ))}
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="max-w-[80%] rounded-2xl px-6 py-4 bg-white border border-slate-200">
-                    <div className="flex gap-2">
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                    </div>
-                  </div>
-                </div>
-              )}
               <div ref={messagesEndRef} />
             </div>
           )}
@@ -136,28 +386,56 @@ export default function Home() {
 
       <div className="border-t border-slate-200 bg-gradient-to-b from-white to-slate-50 px-4 py-4">
         <div className="max-w-3xl mx-auto">
+          {/* Attachments Preview */}
+          {attachments.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {attachments.map((attachment, index) => (
+                <div
+                  key={index}
+                  className="relative group bg-slate-100 border border-slate-200 rounded-lg p-2 flex items-center gap-2"
+                >
+                  {attachment.type === 'image' ? (
+                    <img
+                      src={attachment.url}
+                      alt={attachment.fileName}
+                      className="w-12 h-12 object-cover rounded"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 bg-red-100 rounded flex items-center justify-center text-red-600 text-xs font-bold">
+                      PDF
+                    </div>
+                  )}
+                  <span className="text-xs text-slate-600 max-w-[100px] truncate">
+                    {attachment.fileName}
+                  </span>
+                  <button
+                    onClick={() => removeAttachment(index)}
+                    className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="relative bg-white rounded-2xl shadow-lg border-2 border-slate-200 focus-within:border-blue-500 transition-colors">
             <input
               type="file"
               ref={fileInputRef}
-              onChange={handleFileChange}
+              onChange={handleFileSelect}
               className="hidden"
-              accept="image/*,.pdf,.doc,.docx,.txt"
+              accept="image/*,.pdf"
+              multiple
             />
             <div className="flex items-end gap-2 p-3">
               <button
                 onClick={handleFileClick}
                 className="p-2 rounded-lg hover:bg-slate-100 transition-colors text-slate-600 flex-shrink-0"
-                title="Attach file"
+                title="Attach files (images & PDFs)"
+                disabled={isLoading}
               >
                 <Paperclip size={20} />
-              </button>
-              <button
-                onClick={handleFileClick}
-                className="p-2 rounded-lg hover:bg-slate-100 transition-colors text-slate-600 flex-shrink-0"
-                title="Attach image"
-              >
-                <ImageIcon size={20} />
               </button>
               <textarea
                 value={input}
@@ -167,19 +445,33 @@ export default function Home() {
                 className="flex-1 resize-none outline-none px-3 py-2 max-h-32 text-slate-800 placeholder:text-slate-400"
                 rows={1}
                 style={{ minHeight: '40px' }}
+                disabled={isLoading}
               />
               <button
                 onClick={handleSend}
-                disabled={!input.trim() || isLoading}
+                disabled={(!input.trim() && attachments.length === 0) || isLoading}
                 className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg flex-shrink-0"
               >
                 <Send size={20} />
               </button>
             </div>
           </div>
-          <p className="text-xs text-slate-500 text-center mt-3">
-            Press Enter to send, Shift+Enter for new line
-          </p>
+          <div className="flex items-center justify-between mt-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isStreaming}
+                onChange={(e) => setIsStreaming(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-xs text-slate-600">
+                Stream responses (real-time)
+              </span>
+            </label>
+            <p className="text-xs text-slate-500">
+              Press Enter to send, Shift+Enter for new line
+            </p>
+          </div>
         </div>
       </div>
     </div>
