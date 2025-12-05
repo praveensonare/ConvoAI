@@ -336,7 +336,7 @@ export default function Home() {
                   }`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-2xl px-6 py-4 shadow-md overflow-hidden ${
+                    className={`max-w-[80%] rounded-2xl px-6 py-4 shadow-md ${
                       message.role === 'user'
                         ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white'
                         : 'bg-white border border-slate-200 text-slate-800'
