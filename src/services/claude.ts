@@ -59,7 +59,7 @@ export async function sendMessage(
 
     // Make API call to Claude
     const response = await client.messages.create({
-      model: 'claude-3-5-sonnet-20240620',
+      model: 'claude-sonnet-4-5-20250929',
       max_tokens: 8192,
       system: systemPrompt || undefined, // Only include if not empty
       messages: messages.map(msg => ({
