@@ -8,25 +8,7 @@ interface CodeRendererProps {
 
 // Detect if code contains renderable HTML/CSS/JS
 function isRenderableCode(code: string, language: string): boolean {
-  const lowerCode = code.toLowerCase();
-  const lowerLang = language.toLowerCase();
-
-  // Only render if explicitly marked as html, svg, or css
-  if (['html', 'svg', 'css'].includes(lowerLang)) {
-    return true;
-  }
-
-  // For unmarked code blocks, only render if they contain complete HTML structure
-  if (lowerCode.includes('<!doctype html') ||
-      (lowerCode.includes('<html') && lowerCode.includes('</html'))) {
-    return true;
-  }
-
-  // Render standalone SVG
-  if (lowerCode.trim().startsWith('<svg') && lowerCode.includes('</svg>')) {
-    return true;
-  }
-
+  // Disabled: always show code as text, never render visually
   return false;
 }
 

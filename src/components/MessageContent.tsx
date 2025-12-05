@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import ChartRenderer from './ChartRenderer';
 import ImageViewer from './ImageViewer';
 import DocumentViewer from './DocumentViewer';
 import CodeRenderer from './CodeRenderer';
@@ -14,9 +13,8 @@ interface MessageContentProps {
 }
 
 interface ParsedContent {
-  type: 'text' | 'chart' | 'code';
+  type: 'text' | 'code';
   content: string;
-  chartConfig?: any;
   language?: string;
 }
 
@@ -38,42 +36,12 @@ function parseMessageContent(content: string): ParsedContent[] {
     const language = match[1] || '';
     const codeContent = match[2].trim();
 
-    // Try to parse as chart configuration
-    if (language === 'json' || language === 'chart') {
-      try {
-        const parsed = JSON.parse(codeContent);
-
-        // Check if it looks like a chart config
-        if (parsed.type && parsed.data && Array.isArray(parsed.data)) {
-          parts.push({
-            type: 'chart',
-            content: codeContent,
-            chartConfig: parsed,
-          });
-        } else {
-          // It's JSON but not a chart
-          parts.push({
-            type: 'code',
-            content: codeContent,
-            language: language || 'json',
-          });
-        }
-      } catch (e) {
-        // Not valid JSON, treat as regular code
-        parts.push({
-          type: 'code',
-          content: codeContent,
-          language: language || 'text',
-        });
-      }
-    } else {
-      // Regular code block
-      parts.push({
-        type: 'code',
-        content: codeContent,
-        language: language || 'text',
-      });
-    }
+    // Always treat as regular code block (graphical rendering disabled)
+    parts.push({
+      type: 'code',
+      content: codeContent,
+      language: language || 'text',
+    });
 
     lastIndex = match.index + match[0].length;
   }
@@ -134,10 +102,6 @@ export default function MessageContent({ content, attachments }: MessageContentP
 
       {/* Render parsed content */}
       {parsedContent.map((part, index) => {
-        if (part.type === 'chart' && part.chartConfig) {
-          return <ChartRenderer key={index} config={part.chartConfig} />;
-        }
-
         if (part.type === 'code') {
           return (
             <CodeRenderer
