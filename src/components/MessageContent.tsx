@@ -95,7 +95,13 @@ function parseMessageContent(content: string): ParsedContent[] {
 }
 
 export default function MessageContent({ content, attachments }: MessageContentProps) {
-  const parsedContent = useMemo(() => parseMessageContent(content), [content]);
+  const parsedContent = useMemo(() => {
+    // Handle empty content
+    if (!content || content.trim() === '') {
+      return [];
+    }
+    return parseMessageContent(content);
+  }, [content]);
 
   return (
     <div className="message-content">

@@ -11,30 +11,19 @@ function isRenderableCode(code: string, language: string): boolean {
   const lowerCode = code.toLowerCase();
   const lowerLang = language.toLowerCase();
 
-  // Check language hints
-  if (['html', 'svg', 'xml'].includes(lowerLang)) {
+  // Only render if explicitly marked as html, svg, or css
+  if (['html', 'svg', 'css'].includes(lowerLang)) {
     return true;
   }
 
-  // Check for HTML tags
-  if (lowerCode.includes('<html') ||
-      lowerCode.includes('<!doctype') ||
-      lowerCode.includes('<body') ||
-      lowerCode.includes('<div') ||
-      lowerCode.includes('<svg')) {
+  // For unmarked code blocks, only render if they contain complete HTML structure
+  if (lowerCode.includes('<!doctype html') ||
+      (lowerCode.includes('<html') && lowerCode.includes('</html'))) {
     return true;
   }
 
-  // Check for CSS
-  if (lowerLang === 'css') {
-    return true;
-  }
-
-  // Check for JavaScript with DOM manipulation
-  if ((lowerLang === 'javascript' || lowerLang === 'js') &&
-      (lowerCode.includes('document.') ||
-       lowerCode.includes('canvas') ||
-       lowerCode.includes('ctx.'))) {
+  // Render standalone SVG
+  if (lowerCode.trim().startsWith('<svg') && lowerCode.includes('</svg>')) {
     return true;
   }
 
