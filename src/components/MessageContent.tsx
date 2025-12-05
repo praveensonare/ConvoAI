@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import ChartRenderer from './ChartRenderer';
 import ImageViewer from './ImageViewer';
 import DocumentViewer from './DocumentViewer';
+import CodeRenderer from './CodeRenderer';
 
 interface MessageContentProps {
   content: string;
@@ -133,20 +134,11 @@ export default function MessageContent({ content, attachments }: MessageContentP
 
         if (part.type === 'code') {
           return (
-            <div key={index} className="my-3">
-              <div className="bg-slate-900 rounded-lg overflow-hidden">
-                {part.language && (
-                  <div className="px-4 py-2 bg-slate-800 text-slate-300 text-xs font-mono">
-                    {part.language}
-                  </div>
-                )}
-                <pre className="p-4 overflow-x-auto">
-                  <code className="text-sm text-slate-100 font-mono">
-                    {part.content}
-                  </code>
-                </pre>
-              </div>
-            </div>
+            <CodeRenderer
+              key={index}
+              code={part.content}
+              language={part.language || 'text'}
+            />
           );
         }
 
