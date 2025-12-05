@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Paperclip, Image as ImageIcon } from 'lucide-react';
+import { sendMessage } from '../services/claude';
 
 interface Message {
   id: string;
@@ -37,16 +38,37 @@ export default function Home() {
     setInput('');
     setIsLoading(true);
 
-    setTimeout(() => {
+    try {
+      // Convert messages to format expected by Claude API
+      const conversationHistory = [...messages, userMessage].map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+      // Call Claude API with messages
+      const response = await sendMessage(conversationHistory);
+
+      // Create assistant message
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'This is a demo response. Connect your API token in Settings to enable real AI responses.',
+        content: response.error || response.content || 'No response received.',
         timestamp: new Date(),
       };
+
       setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      // Handle any unexpected errors
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: `Error: ${error instanceof Error ? error.message : 'An unexpected error occurred.'}`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
