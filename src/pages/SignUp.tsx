@@ -1,23 +1,34 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { LogIn, Brain, Mail, Lock } from 'lucide-react';
+import { UserPlus, Brain, Mail, Lock, User } from 'lucide-react';
 
-export default function Login() {
+export default function SignUp() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleSignUp = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (password !== confirmPassword) {
+      alert('Passwords do not match!');
+      return;
+    }
+
+    // Dummy sign up - just set auth flag
     localStorage.setItem('isAuthenticated', 'true');
     localStorage.setItem('userEmail', email);
+    localStorage.setItem('userName', name);
     navigate('/');
   };
 
-  const handleGoogleLogin = () => {
-    // Dummy Google login - just set auth flag
+  const handleGoogleSignUp = () => {
+    // Dummy Google sign up - just set auth flag
     localStorage.setItem('isAuthenticated', 'true');
     localStorage.setItem('userEmail', 'user@gmail.com');
+    localStorage.setItem('userName', 'Google User');
     navigate('/');
   };
 
@@ -32,10 +43,26 @@ export default function Login() {
               <div className="w-16 h-16 mx-auto rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-lg mb-3">
                 <Brain className="text-white" size={32} />
               </div>
-              <h1 className="text-2xl font-bold text-slate-800 mb-1">Welcome Back</h1>
-              <p className="text-slate-500 text-sm">Sign in to continue to ConvoAI</p>
+              <h1 className="text-2xl font-bold text-slate-800 mb-1">Create Account</h1>
+              <p className="text-slate-500 text-sm">Sign up to get started with ConvoAI</p>
             </div>
-            <form onSubmit={handleLogin} className="space-y-6">
+
+            <form onSubmit={handleSignUp} className="space-y-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+                  <User size={16} />
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="John Doe"
+                  required
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-slate-800 placeholder:text-slate-400 shadow-sm transition-all"
+                />
+              </div>
+
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
                   <Mail size={16} />
@@ -60,31 +87,35 @@ export default function Login() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder="Create a password"
                   required
+                  minLength={6}
                   className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-slate-800 placeholder:text-slate-400 shadow-sm transition-all"
                 />
               </div>
 
-              <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
-                  />
-                  <span className="text-slate-600">Remember me</span>
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+                  <Lock size={16} />
+                  Confirm Password
                 </label>
-                <Link to="/forgot-password" className="text-blue-600 hover:text-blue-700 font-medium">
-                  Forgot password?
-                </Link>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm your password"
+                  required
+                  minLength={6}
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-slate-800 placeholder:text-slate-400 shadow-sm transition-all"
+                />
               </div>
 
               <button
                 type="submit"
                 className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl font-semibold"
               >
-                <LogIn size={20} />
-                Sign In
+                <UserPlus size={20} />
+                Create Account
               </button>
             </form>
 
@@ -93,12 +124,12 @@ export default function Login() {
                 <div className="w-full border-t border-slate-200"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-slate-500">Or continue with</span>
+                <span className="px-4 bg-white text-slate-500">Or sign up with</span>
               </div>
             </div>
 
             <button
-              onClick={handleGoogleLogin}
+              onClick={handleGoogleSignUp}
               className="w-full flex items-center justify-center gap-3 px-6 py-3 border-2 border-slate-200 rounded-xl hover:bg-slate-50 transition-all font-medium text-slate-700"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -112,9 +143,9 @@ export default function Login() {
 
             <div className="mt-6 text-center">
               <p className="text-slate-600 text-sm">
-                Don't have an account?{' '}
-                <Link to="/signup" className="text-blue-600 hover:text-blue-700 font-semibold">
-                  Sign up
+                Already have an account?{' '}
+                <Link to="/login" className="text-blue-600 hover:text-blue-700 font-semibold">
+                  Sign in
                 </Link>
               </p>
             </div>
