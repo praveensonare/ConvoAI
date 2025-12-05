@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Send, Paperclip, Image as ImageIcon, X } from 'lucide-react';
-import { sendMessageStream, fileToBase64 } from '../services/claude';
+import { Send, Paperclip, X } from 'lucide-react';
+import { sendMessageStream, sendMessage, fileToBase64 } from '../services/claude';
 import MessageContent from '../components/MessageContent';
 import {
   createConversation,
@@ -33,6 +33,7 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(true); // Streaming enabled by default
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -151,18 +152,8 @@ export default function Home() {
     setAttachments([]);
     setIsLoading(true);
 
-    // Create placeholder for streaming assistant message
+    // Create placeholder for assistant message
     const assistantMessageId = (Date.now() + 1).toString();
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: assistantMessageId,
-        role: 'assistant',
-        content: '',
-        timestamp: new Date(),
-        isStreaming: true,
-      },
-    ]);
 
     try {
       // Convert messages to format expected by Claude API
@@ -203,63 +194,85 @@ export default function Home() {
 
       const resolvedHistory = await Promise.all(conversationHistory);
 
-      // Call Claude API with streaming
-      await sendMessageStream(
-        resolvedHistory,
-        // onChunk: Append text as it arrives
-        (chunk: string) => {
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === assistantMessageId
-                ? { ...msg, content: msg.content + chunk }
-                : msg
-            )
-          );
-        },
-        // onComplete: Mark streaming as complete
-        () => {
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === assistantMessageId
-                ? { ...msg, isStreaming: false }
-                : msg
-            )
-          );
-          setIsLoading(false);
-        },
-        // onError: Display error
-        (error: string) => {
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === assistantMessageId
-                ? {
-                    ...msg,
-                    content: `Error: ${error}`,
-                    isStreaming: false,
-                  }
-                : msg
-            )
-          );
-          setIsLoading(false);
-        }
-      );
+      if (isStreaming) {
+        // Streaming mode: Add placeholder and stream response
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: assistantMessageId,
+            role: 'assistant',
+            content: '',
+            timestamp: new Date(),
+            isStreaming: true,
+          },
+        ]);
+
+        await sendMessageStream(
+          resolvedHistory,
+          // onChunk: Append text as it arrives
+          (chunk: string) => {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? { ...msg, content: msg.content + chunk }
+                  : msg
+              )
+            );
+          },
+          // onComplete: Mark streaming as complete
+          () => {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? { ...msg, isStreaming: false }
+                  : msg
+              )
+            );
+            setIsLoading(false);
+          },
+          // onError: Display error
+          (error: string) => {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMessageId
+                  ? {
+                      ...msg,
+                      content: `Error: ${error}`,
+                      isStreaming: false,
+                    }
+                  : msg
+              )
+            );
+            setIsLoading(false);
+          }
+        );
+      } else {
+        // Non-streaming mode: Wait for full response
+        const response = await sendMessage(resolvedHistory);
+
+        const assistantMessage: Message = {
+          id: assistantMessageId,
+          role: 'assistant',
+          content: response.error || response.content || 'No response received.',
+          timestamp: new Date(),
+        };
+
+        setMessages((prev) => [...prev, assistantMessage]);
+        setIsLoading(false);
+      }
     } catch (error) {
       // Handle any unexpected errors
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === assistantMessageId
-            ? {
-                ...msg,
-                content: `Error: ${
-                  error instanceof Error
-                    ? error.message
-                    : 'An unexpected error occurred.'
-                }`,
-                isStreaming: false,
-              }
-            : msg
-        )
-      );
+      const errorMessage: Message = {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: `Error: ${
+          error instanceof Error
+            ? error.message
+            : 'An unexpected error occurred.'
+        }`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
       setIsLoading(false);
     }
   };
@@ -413,18 +426,10 @@ export default function Home() {
               <button
                 onClick={handleFileClick}
                 className="p-2 rounded-lg hover:bg-slate-100 transition-colors text-slate-600 flex-shrink-0"
-                title="Attach file"
+                title="Attach files (images & PDFs)"
                 disabled={isLoading}
               >
                 <Paperclip size={20} />
-              </button>
-              <button
-                onClick={handleFileClick}
-                className="p-2 rounded-lg hover:bg-slate-100 transition-colors text-slate-600 flex-shrink-0"
-                title="Attach image"
-                disabled={isLoading}
-              >
-                <ImageIcon size={20} />
               </button>
               <textarea
                 value={input}
@@ -445,10 +450,22 @@ export default function Home() {
               </button>
             </div>
           </div>
-          <p className="text-xs text-slate-500 text-center mt-3">
-            Press Enter to send, Shift+Enter for new line • Upload images &amp;
-            PDFs
-          </p>
+          <div className="flex items-center justify-between mt-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isStreaming}
+                onChange={(e) => setIsStreaming(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-xs text-slate-600">
+                Stream responses (real-time)
+              </span>
+            </label>
+            <p className="text-xs text-slate-500">
+              Press Enter to send, Shift+Enter for new line
+            </p>
+          </div>
         </div>
       </div>
     </div>
