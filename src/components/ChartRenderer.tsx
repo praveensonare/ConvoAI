@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import {
   LineChart,
   Line,
@@ -9,6 +10,12 @@ import {
   Area,
   ScatterChart,
   Scatter,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  ComposedChart,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -18,16 +25,25 @@ import {
   Cell,
 } from 'recharts';
 
+// Lazy load Plotly
+const Plot = lazy(() => import('react-plotly.js'));
+
 interface ChartConfig {
-  type: 'line' | 'bar' | 'pie' | 'area' | 'scatter';
+  type: 'line' | 'bar' | 'pie' | 'area' | 'scatter' | 'radar' | 'composed' | 'heatmap' | '3d-scatter' | 'surface' | 'histogram';
   data: any[];
   xKey?: string;
   yKey?: string;
+  zKey?: string;
   dataKey?: string;
   title?: string;
   colors?: string[];
   width?: number;
   height?: number;
+  series?: Array<{
+    name: string;
+    dataKey: string;
+    type?: 'line' | 'bar' | 'area';
+  }>;
 }
 
 const DEFAULT_COLORS = [
@@ -157,6 +173,180 @@ export default function ChartRenderer({ config }: { config: ChartConfig }) {
               <Scatter name="Data" data={data} fill={colors[0]} />
             </ScatterChart>
           </ResponsiveContainer>
+        );
+
+      case 'radar':
+        return (
+          <ResponsiveContainer width="100%" height={height}>
+            <RadarChart data={data}>
+              <PolarGrid />
+              <PolarAngleAxis dataKey={xKey} />
+              <PolarRadiusAxis />
+              <Radar
+                name="Values"
+                dataKey={yKey}
+                stroke={colors[0]}
+                fill={colors[0]}
+                fillOpacity={0.6}
+              />
+              <Legend />
+              <Tooltip />
+            </RadarChart>
+          </ResponsiveContainer>
+        );
+
+      case 'composed':
+        return (
+          <ResponsiveContainer width="100%" height={height}>
+            <ComposedChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey={xKey} />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              {series?.map((s, idx) => {
+                if (s.type === 'line') {
+                  return (
+                    <Line
+                      key={s.name}
+                      type="monotone"
+                      dataKey={s.dataKey}
+                      stroke={colors[idx % colors.length]}
+                      name={s.name}
+                    />
+                  );
+                } else if (s.type === 'bar') {
+                  return (
+                    <Bar
+                      key={s.name}
+                      dataKey={s.dataKey}
+                      fill={colors[idx % colors.length]}
+                      name={s.name}
+                    />
+                  );
+                } else if (s.type === 'area') {
+                  return (
+                    <Area
+                      key={s.name}
+                      type="monotone"
+                      dataKey={s.dataKey}
+                      fill={colors[idx % colors.length]}
+                      stroke={colors[idx % colors.length]}
+                      name={s.name}
+                    />
+                  );
+                }
+                return null;
+              })}
+            </ComposedChart>
+          </ResponsiveContainer>
+        );
+
+      case 'heatmap':
+        return (
+          <Suspense fallback={<div className="p-4">Loading chart...</div>}>
+            <Plot
+              data={[
+                {
+                  z: data,
+                  type: 'heatmap',
+                  colorscale: 'Viridis',
+                },
+              ]}
+              layout={{
+                title: title || '',
+                width: width,
+                height: height,
+                autosize: true,
+              }}
+              useResizeHandler
+              style={{ width: '100%', height: '100%' }}
+            />
+          </Suspense>
+        );
+
+      case '3d-scatter':
+        return (
+          <Suspense fallback={<div className="p-4">Loading chart...</div>}>
+            <Plot
+              data={[
+                {
+                  x: data.map(d => d[xKey || 'x']),
+                  y: data.map(d => d[yKey || 'y']),
+                  z: data.map(d => d[zKey || 'z']),
+                  mode: 'markers',
+                  type: 'scatter3d',
+                  marker: {
+                    size: 5,
+                    color: colors[0],
+                  },
+                },
+              ]}
+              layout={{
+                title: title || '',
+                width: width,
+                height: height,
+                autosize: true,
+                scene: {
+                  xaxis: { title: xKey || 'X' },
+                  yaxis: { title: yKey || 'Y' },
+                  zaxis: { title: zKey || 'Z' },
+                },
+              }}
+              useResizeHandler
+              style={{ width: '100%', height: '100%' }}
+            />
+          </Suspense>
+        );
+
+      case 'surface':
+        return (
+          <Suspense fallback={<div className="p-4">Loading chart...</div>}>
+            <Plot
+              data={[
+                {
+                  z: data,
+                  type: 'surface',
+                  colorscale: 'Viridis',
+                },
+              ]}
+              layout={{
+                title: title || '',
+                width: width,
+                height: height,
+                autosize: true,
+              }}
+              useResizeHandler
+              style={{ width: '100%', height: '100%' }}
+            />
+          </Suspense>
+        );
+
+      case 'histogram':
+        return (
+          <Suspense fallback={<div className="p-4">Loading chart...</div>}>
+            <Plot
+              data={[
+                {
+                  x: data.map(d => d[xKey || 'value']),
+                  type: 'histogram',
+                  marker: {
+                    color: colors[0],
+                  },
+                },
+              ]}
+              layout={{
+                title: title || '',
+                width: width,
+                height: height,
+                autosize: true,
+                xaxis: { title: xKey || 'Value' },
+                yaxis: { title: 'Count' },
+              }}
+              useResizeHandler
+              style={{ width: '100%', height: '100%' }}
+            />
+          </Suspense>
         );
 
       default:

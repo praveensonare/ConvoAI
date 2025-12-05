@@ -1,8 +1,15 @@
 import { useMemo } from 'react';
 import ChartRenderer from './ChartRenderer';
+import ImageViewer from './ImageViewer';
+import DocumentViewer from './DocumentViewer';
 
 interface MessageContentProps {
   content: string;
+  attachments?: Array<{
+    type: 'image' | 'document';
+    url: string;
+    fileName?: string;
+  }>;
 }
 
 interface ParsedContent {
@@ -86,11 +93,39 @@ function parseMessageContent(content: string): ParsedContent[] {
   return parts;
 }
 
-export default function MessageContent({ content }: MessageContentProps) {
+export default function MessageContent({ content, attachments }: MessageContentProps) {
   const parsedContent = useMemo(() => parseMessageContent(content), [content]);
 
   return (
     <div className="message-content">
+      {/* Render attachments first */}
+      {attachments && attachments.length > 0 && (
+        <div className="attachments mb-3">
+          {attachments.map((attachment, idx) => {
+            if (attachment.type === 'image') {
+              return (
+                <ImageViewer
+                  key={idx}
+                  src={attachment.url}
+                  fileName={attachment.fileName}
+                  alt={attachment.fileName}
+                />
+              );
+            } else if (attachment.type === 'document') {
+              return (
+                <DocumentViewer
+                  key={idx}
+                  file={attachment.url}
+                  fileName={attachment.fileName}
+                />
+              );
+            }
+            return null;
+          })}
+        </div>
+      )}
+
+      {/* Render parsed content */}
       {parsedContent.map((part, index) => {
         if (part.type === 'chart' && part.chartConfig) {
           return <ChartRenderer key={index} config={part.chartConfig} />;
