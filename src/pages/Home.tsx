@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Paperclip, Image as ImageIcon } from 'lucide-react';
 import { sendMessage } from '../services/claude';
+import MessageContent from '../components/MessageContent';
 
 interface Message {
   id: string;
@@ -130,7 +131,9 @@ export default function Home() {
                         </div>
                       )}
                       <div className="flex-1">
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                        <div className="text-sm leading-relaxed">
+                          <MessageContent content={message.content} />
+                        </div>
                         <p className={`text-xs mt-2 ${message.role === 'user' ? 'text-blue-100' : 'text-slate-400'}`}>
                           {message.timestamp.toLocaleTimeString()}
                         </p>
