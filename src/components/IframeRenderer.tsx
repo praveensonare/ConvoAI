@@ -22,18 +22,20 @@ export default function IframeRenderer({ htmlCode, height = '600px' }: IframeRen
   }, [htmlCode]);
 
   return (
-    <div className="my-4">
-      <iframe
-        ref={iframeRef}
-        sandbox="allow-scripts allow-same-origin"
-        className="w-full border border-slate-300 rounded-lg"
-        style={{
-          height,
-          minHeight: '400px',
-          maxHeight: '800px'
-        }}
-        title="Rendered HTML Output"
-      />
+    <div className="my-4 w-full flex justify-center">
+      <div className="w-[90%]">
+        <iframe
+          ref={iframeRef}
+          sandbox="allow-scripts allow-same-origin"
+          className="w-full border border-slate-300 rounded-lg"
+          style={{
+            height,
+            minHeight: '400px',
+            maxHeight: '800px'
+          }}
+          title="Rendered HTML Output"
+        />
+      </div>
     </div>
   );
 }
