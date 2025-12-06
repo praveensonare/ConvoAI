@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import ImageViewer from './ImageViewer';
 import DocumentViewer from './DocumentViewer';
 import CodeRenderer from './CodeRenderer';
+import IframeRenderer from './IframeRenderer';
 
 interface MessageContentProps {
   content: string;
@@ -103,6 +104,19 @@ export default function MessageContent({ content, attachments }: MessageContentP
       {/* Render parsed content */}
       {parsedContent.map((part, index) => {
         if (part.type === 'code') {
+          // Check if this is HTML code that should be rendered in an iframe
+          if (part.language === 'html') {
+            return (
+              <div key={index}>
+                <CodeRenderer
+                  code={part.content}
+                  language={part.language}
+                />
+                <IframeRenderer htmlCode={part.content} />
+              </div>
+            );
+          }
+
           return (
             <CodeRenderer
               key={index}
