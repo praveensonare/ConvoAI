@@ -4,9 +4,12 @@
 
 The chat now supports rendering HTML graphics (charts, graphs, etc.) using iframes. When you send a code block with the language set to `html`, it will:
 
-1. Display the HTML code in a syntax-highlighted code block
-2. Render the HTML content in an iframe below the code block
-3. The iframe is sandboxed for security with `allow-scripts` and `allow-same-origin` permissions
+1. Extract the HTML code from the message
+2. Render the HTML content in an iframe
+3. Display any text before and after the HTML code naturally
+4. The iframe is sandboxed for security with `allow-scripts` and `allow-same-origin` permissions
+
+**Note:** The HTML code itself is not shown - only the rendered output appears in the iframe. Any text surrounding the HTML code block will be displayed above and below the iframe.
 
 ## Example Usage
 

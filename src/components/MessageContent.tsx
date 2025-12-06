@@ -106,15 +106,7 @@ export default function MessageContent({ content, attachments }: MessageContentP
         if (part.type === 'code') {
           // Check if this is HTML code that should be rendered in an iframe
           if (part.language === 'html') {
-            return (
-              <div key={index}>
-                <CodeRenderer
-                  code={part.content}
-                  language={part.language}
-                />
-                <IframeRenderer htmlCode={part.content} />
-              </div>
-            );
+            return <IframeRenderer key={index} htmlCode={part.content} />;
           }
 
           return (
