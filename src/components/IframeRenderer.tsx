@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Printer, Download, Maximize2, X } from 'lucide-react';
+import { Printer, Download, Maximize2, X, FileDown } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
 
 interface IframeRendererProps {
   htmlCode: string;
@@ -63,6 +64,30 @@ export default function IframeRenderer({ htmlCode, height = '600px' }: IframeRen
     URL.revokeObjectURL(url);
   };
 
+  const handleDownloadPDF = async () => {
+    const iframe = iframeRef.current;
+    if (!iframe?.contentDocument?.body) return;
+
+    try {
+      // Get the iframe content
+      const element = iframe.contentDocument.body;
+
+      // Configure PDF options
+      const options = {
+        margin: 10,
+        filename: `chart-${Date.now()}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      // Generate and download PDF
+      await html2pdf().from(element).set(options).save();
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    }
+  };
+
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
   };
@@ -85,6 +110,13 @@ export default function IframeRenderer({ htmlCode, height = '600px' }: IframeRen
                 title="Print"
               >
                 <Printer size={18} />
+              </button>
+              <button
+                onClick={handleDownloadPDF}
+                className="p-2 rounded-md hover:bg-white hover:shadow-md transition-all"
+                title="Download as PDF"
+              >
+                <FileDown size={18} />
               </button>
               <button
                 onClick={handleDownloadHTML}
@@ -164,13 +196,24 @@ export default function IframeRenderer({ htmlCode, height = '600px' }: IframeRen
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                handleDownloadPDF();
+              }}
+              className="p-2 rounded hover:bg-white/20 text-white transition-colors flex items-center gap-2"
+              title="Download PDF"
+            >
+              <FileDown size={20} />
+              <span className="text-sm font-medium">PDF</span>
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
                 handleDownloadHTML();
               }}
               className="p-2 rounded hover:bg-white/20 text-white transition-colors flex items-center gap-2"
-              title="Download"
+              title="Download HTML"
             >
               <Download size={20} />
-              <span className="text-sm font-medium">Download</span>
+              <span className="text-sm font-medium">HTML</span>
             </button>
           </div>
         </div>
