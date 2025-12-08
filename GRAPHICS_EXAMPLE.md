@@ -1,15 +1,54 @@
-# Graphics Rendering with Iframe - Usage Guide
+# Full-Width Visual Content Rendering - Usage Guide
 
 ## How It Works
 
-The chat now supports rendering HTML graphics (charts, graphs, etc.) using iframes. When you send a code block with the language set to `html`, it will:
+The chat now supports full-width rendering of all visual content (graphics, charts, images, documents) for optimal space usage. Visual content is displayed at full width outside of chat bubbles while maintaining its position in the timeline.
 
-1. Extract the HTML code from the message
-2. Render the HTML content in an iframe
-3. Display any text before and after the HTML code naturally
-4. The iframe is sandboxed for security with `allow-scripts` and `allow-same-origin` permissions
+### Visual Content Types Supported:
 
-**Note:** The HTML code itself is not shown - only the rendered output appears in the iframe. Any text surrounding the HTML code block will be displayed above and below the iframe.
+1. **HTML Graphics (Charts, Graphs, etc.)**
+   - Extract HTML code from message
+   - Render in secure sandboxed iframe at full width
+   - HTML code is not shown - only the rendered output
+   - Text before/after HTML displays naturally in chat bubbles
+
+2. **Images**
+   - Full-width display with zoom, fullscreen, and download controls
+   - Interactive controls: zoom in/out (50%-300%), fullscreen mode
+   - Production-grade image viewer with smooth transitions
+
+3. **PDF Documents**
+   - Full-width display with page navigation
+   - Zoom controls and download functionality
+   - Multi-page support with Previous/Next navigation
+   - Production-grade document viewer
+
+4. **User Attachments**
+   - User-uploaded images and PDFs stay within chat bubbles
+   - Assistant-generated visuals render at full width
+
+## Layout Structure
+
+```
+┌─────────────────────────────────────────┐
+│  Chat Timeline                          │
+│                                         │
+│  [User Text Bubble] ────────────────────┤
+│                                         │
+│  ┌─────────────────────────────────┐   │
+│  │ Full-Width Assistant Image      │   │
+│  └─────────────────────────────────┘   │
+│                                         │
+│  ├──────────── [Assistant Text Bubble] │
+│                                         │
+│  ┌─────────────────────────────────┐   │
+│  │ Full-Width Chart/Graph          │   │
+│  └─────────────────────────────────┘   │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+**Note:** Visual content is responsive and adapts to all screen sizes while maintaining optimal aspect ratios.
 
 ## Example Usage
 
@@ -69,12 +108,30 @@ You can use any JavaScript charting library that works via CDN:
 - **Google Charts**: `https://www.gstatic.com/charts/loader.js`
 - And many more!
 
-## Features
+## Production-Grade Features
 
-- ✅ Automatic HTML code detection
-- ✅ Syntax highlighting for code
-- ✅ Live rendering in iframe
-- ✅ Optimized sizing (min: 400px, max: 800px, default: 600px)
-- ✅ Security sandboxing
-- ✅ Responsive design
-- ✅ Works with external libraries via CDN
+### Security
+- ✅ Sandboxed iframes with `allow-scripts` and `allow-same-origin` permissions
+- ✅ Secure content rendering isolated from main application
+- ✅ XSS protection through iframe sandboxing
+
+### Interactivity
+- ✅ Image zoom controls (50% - 300%)
+- ✅ Fullscreen viewing mode for images
+- ✅ PDF page navigation with Previous/Next buttons
+- ✅ Download functionality for images and PDFs
+- ✅ Smooth transitions and animations
+
+### Layout & Responsiveness
+- ✅ Full-width visual content (100% of chat area)
+- ✅ Responsive design adapts to all screen sizes
+- ✅ Optimized sizing (min: 400px, max: 800px for iframes)
+- ✅ Production-grade UI with gradients and shadows
+- ✅ Maintains timeline sequence and context
+
+### Content Handling
+- ✅ Automatic HTML code detection and extraction
+- ✅ Multi-page PDF support
+- ✅ External library support via CDN (Chart.js, D3.js, Plotly, etc.)
+- ✅ Handles images, PDFs, and HTML graphics seamlessly
+- ✅ User vs Assistant content differentiation

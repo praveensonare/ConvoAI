@@ -11,10 +11,11 @@ interface MessageContentProps {
     url: string;
     fileName?: string;
   }>;
+  role: 'user' | 'assistant';
 }
 
 interface ParsedContent {
-  type: 'text' | 'code';
+  type: 'text' | 'code' | 'html';
   content: string;
   language?: string;
 }
@@ -37,12 +38,20 @@ function parseMessageContent(content: string): ParsedContent[] {
     const language = match[1] || '';
     const codeContent = match[2].trim();
 
-    // Always treat as regular code block (graphical rendering disabled)
-    parts.push({
-      type: 'code',
-      content: codeContent,
-      language: language || 'text',
-    });
+    // Check if HTML - mark as special type
+    if (language === 'html') {
+      parts.push({
+        type: 'html',
+        content: codeContent,
+        language: 'html',
+      });
+    } else {
+      parts.push({
+        type: 'code',
+        content: codeContent,
+        language: language || 'text',
+      });
+    }
 
     lastIndex = match.index + match[0].length;
   }
@@ -63,7 +72,7 @@ function parseMessageContent(content: string): ParsedContent[] {
   return parts;
 }
 
-export default function MessageContent({ content, attachments }: MessageContentProps) {
+export default function MessageContent({ content, attachments, role }: MessageContentProps) {
   const parsedContent = useMemo(() => {
     // Handle empty content
     if (!content || content.trim() === '') {
@@ -74,8 +83,8 @@ export default function MessageContent({ content, attachments }: MessageContentP
 
   return (
     <div className="message-content">
-      {/* Render attachments first */}
-      {attachments && attachments.length > 0 && (
+      {/* Only render user attachments in bubble - assistant attachments are rendered at full width in Home.tsx */}
+      {attachments && attachments.length > 0 && role === 'user' && (
         <div className="attachments mb-3">
           {attachments.map((attachment, idx) => {
             if (attachment.type === 'image') {
@@ -103,12 +112,12 @@ export default function MessageContent({ content, attachments }: MessageContentP
 
       {/* Render parsed content */}
       {parsedContent.map((part, index) => {
-        if (part.type === 'code') {
-          // Check if this is HTML code that should be rendered in an iframe
-          if (part.language === 'html') {
-            return <IframeRenderer key={index} htmlCode={part.content} />;
-          }
+        if (part.type === 'html') {
+          // HTML will be rendered at full width by parent
+          return null;
+        }
 
+        if (part.type === 'code') {
           return (
             <CodeRenderer
               key={index}
@@ -126,4 +135,17 @@ export default function MessageContent({ content, attachments }: MessageContentP
       })}
     </div>
   );
+}
+
+// Export helper to get HTML content for full-width rendering
+export function extractHtmlContent(content: string): string[] {
+  const htmlBlocks: string[] = [];
+  const codeBlockRegex = /```html\n([\s\S]*?)```/g;
+  let match;
+
+  while ((match = codeBlockRegex.exec(content)) !== null) {
+    htmlBlocks.push(match[1].trim());
+  }
+
+  return htmlBlocks;
 }
