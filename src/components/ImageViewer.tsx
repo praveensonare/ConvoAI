@@ -35,53 +35,61 @@ export default function ImageViewer({ src, alt, fileName }: ImageViewerProps) {
 
   return (
     <>
-      <div className="my-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-        <div className="mb-3 flex items-center justify-between">
-          <h4 className="text-sm font-medium text-slate-700">
-            {fileName || alt || 'Image'}
-          </h4>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={zoomOut}
-              className="p-1 rounded hover:bg-slate-200 transition-colors"
-              title="Zoom out"
-              disabled={scale <= 0.5}
-            >
-              <ZoomOut size={16} />
-            </button>
-            <span className="text-xs text-slate-600">{Math.round(scale * 100)}%</span>
-            <button
-              onClick={zoomIn}
-              className="p-1 rounded hover:bg-slate-200 transition-colors"
-              title="Zoom in"
-              disabled={scale >= 3.0}
-            >
-              <ZoomIn size={16} />
-            </button>
-            <button
-              onClick={toggleFullscreen}
-              className="p-1 rounded hover:bg-slate-200 transition-colors ml-2"
-              title="Fullscreen"
-            >
-              <Maximize2 size={16} />
-            </button>
-            <button
-              onClick={downloadImage}
-              className="p-1 rounded hover:bg-slate-200 transition-colors"
-              title="Download"
-            >
-              <Download size={16} />
-            </button>
+      <div className="w-full mb-6">
+        <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-lg shadow-lg border border-slate-200">
+          <div className="mb-3 flex items-center justify-between flex-wrap gap-2">
+            <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+              <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              {fileName || alt || 'Image'}
+            </h4>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={zoomOut}
+                className="p-2 rounded-md hover:bg-white hover:shadow-md transition-all disabled:opacity-40"
+                title="Zoom out"
+                disabled={scale <= 0.5}
+              >
+                <ZoomOut size={18} />
+              </button>
+              <span className="text-sm font-medium text-slate-700 min-w-[50px] text-center">
+                {Math.round(scale * 100)}%
+              </span>
+              <button
+                onClick={zoomIn}
+                className="p-2 rounded-md hover:bg-white hover:shadow-md transition-all disabled:opacity-40"
+                title="Zoom in"
+                disabled={scale >= 3.0}
+              >
+                <ZoomIn size={18} />
+              </button>
+              <div className="w-px h-6 bg-slate-300 mx-1"></div>
+              <button
+                onClick={toggleFullscreen}
+                className="p-2 rounded-md hover:bg-white hover:shadow-md transition-all"
+                title="Fullscreen"
+              >
+                <Maximize2 size={18} />
+              </button>
+              <button
+                onClick={downloadImage}
+                className="p-2 rounded-md hover:bg-white hover:shadow-md transition-all"
+                title="Download"
+              >
+                <Download size={18} />
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div className="bg-white border border-slate-200 rounded overflow-auto max-h-[600px] flex items-center justify-center">
-          <img
-            src={src}
-            alt={alt || 'Image'}
-            style={{ transform: `scale(${scale})`, transition: 'transform 0.2s' }}
-            className="max-w-full h-auto"
-          />
+          <div className="bg-white border-2 border-slate-300 rounded-md overflow-auto max-h-[700px] flex items-center justify-center">
+            <img
+              src={src}
+              alt={alt || 'Image'}
+              style={{ transform: `scale(${scale})`, transition: 'transform 0.2s' }}
+              className="max-w-full h-auto"
+            />
+          </div>
         </div>
       </div>
 
