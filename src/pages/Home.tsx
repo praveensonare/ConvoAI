@@ -374,7 +374,7 @@ export default function Home() {
                       <div
                         className={`max-w-[80%] rounded-2xl px-6 py-4 shadow-md ${
                           message.role === 'user'
-                            ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white'
+                            ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white'
                             : 'bg-white border border-slate-200 text-slate-800'
                         }`}
                       >
@@ -391,7 +391,7 @@ export default function Home() {
                             </div>
                           )}
                           <div className="flex-1">
-                            <div className="text-sm leading-relaxed">
+                            <div className={`leading-relaxed ${message.role === 'user' ? 'text-base font-medium' : 'text-sm'}`}>
                               <MessageContent
                                 content={message.content}
                                 attachments={message.attachments}
@@ -404,7 +404,7 @@ export default function Home() {
                             <p
                               className={`text-xs mt-2 ${
                                 message.role === 'user'
-                                  ? 'text-blue-100'
+                                  ? 'text-indigo-100'
                                   : 'text-slate-400'
                               }`}
                             >
