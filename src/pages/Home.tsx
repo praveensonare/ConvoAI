@@ -374,11 +374,22 @@ export default function Home() {
                       <div
                         className={`max-w-[80%] rounded-2xl px-6 py-4 shadow-md ${
                           message.role === 'user'
-                            ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white'
+                            ? 'bg-slate-100 border border-slate-300 text-slate-800'
                             : 'bg-white border border-slate-200 text-slate-800'
                         }`}
                       >
                         <div className="flex items-start gap-3">
+                          {message.role === 'user' && (
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 mt-1">
+                              <svg
+                                className="w-4 h-4 text-white"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
                           {message.role === 'assistant' && (
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 mt-1">
                               <svg
@@ -404,7 +415,7 @@ export default function Home() {
                             <p
                               className={`text-xs mt-2 ${
                                 message.role === 'user'
-                                  ? 'text-indigo-100'
+                                  ? 'text-slate-500'
                                   : 'text-slate-400'
                               }`}
                             >
