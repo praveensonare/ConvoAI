@@ -374,7 +374,7 @@ export default function Home() {
                       <div
                         className={`max-w-[80%] rounded-2xl px-6 py-4 shadow-md ${
                           message.role === 'user'
-                            ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white'
+                            ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white'
                             : 'bg-white border border-slate-200 text-slate-800'
                         }`}
                       >
@@ -391,7 +391,7 @@ export default function Home() {
                             </div>
                           )}
                           <div className="flex-1">
-                            <div className="text-sm leading-relaxed">
+                            <div className={`leading-relaxed ${message.role === 'user' ? 'text-base font-medium' : 'text-sm'}`}>
                               <MessageContent
                                 content={message.content}
                                 attachments={message.attachments}
@@ -404,7 +404,7 @@ export default function Home() {
                             <p
                               className={`text-xs mt-2 ${
                                 message.role === 'user'
-                                  ? 'text-blue-100'
+                                  ? 'text-indigo-100'
                                   : 'text-slate-400'
                               }`}
                             >
@@ -426,6 +426,35 @@ export default function Home() {
                   </div>
                 );
               })}
+
+              {/* Loading indicator while AI is processing */}
+              {isLoading && (
+                <div className="w-full">
+                  <div className="flex justify-start mb-4">
+                    <div className="max-w-[80%] rounded-2xl px-6 py-4 shadow-md bg-white border border-slate-200 text-slate-800">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 mt-1">
+                          <svg
+                            className="w-4 h-4 text-white"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                            <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                            <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div ref={messagesEndRef} />
             </div>
           )}

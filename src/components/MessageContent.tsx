@@ -1,4 +1,6 @@
 import { useMemo } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import ImageViewer from './ImageViewer';
 import DocumentViewer from './DocumentViewer';
 import CodeRenderer from './CodeRenderer';
@@ -128,8 +130,10 @@ export default function MessageContent({ content, attachments, role }: MessageCo
         }
 
         return (
-          <div key={index} className="whitespace-pre-wrap">
-            {part.content}
+          <div key={index} className="prose prose-sm max-w-none">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {part.content}
+            </ReactMarkdown>
           </div>
         );
       })}
