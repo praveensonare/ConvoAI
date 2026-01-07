@@ -52,7 +52,7 @@ export default function DocumentViewer({ file, fileName }: DocumentViewerProps) 
   return (
     <div className="w-full mb-6">
       <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg shadow-lg border border-slate-200 overflow-hidden">
-        <div className="px-4 py-3 flex items-center justify-between flex-wrap gap-2 bg-white bg-opacity-50">
+        <div className="px-3 py-2 flex items-center justify-between flex-wrap gap-2 bg-white bg-opacity-50">
           <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
             <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
@@ -121,7 +121,7 @@ export default function DocumentViewer({ file, fileName }: DocumentViewerProps) 
         </div>
 
         {numPages > 1 && (
-          <div className="px-4 py-3 flex items-center justify-center gap-4 bg-white bg-opacity-50 border-t border-slate-200">
+          <div className="px-3 py-2 flex items-center justify-center gap-4 bg-white bg-opacity-50 border-t border-slate-200">
             <button
               onClick={previousPage}
               disabled={pageNumber <= 1}
