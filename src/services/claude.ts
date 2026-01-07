@@ -56,6 +56,14 @@ When user seeks quiz, puzzles, games or interactive elements:
 - Group all instructions at the top or bottom, keep interactive area clean
 - Show zoom in or flash effect animations when score changes to highlight updates
 - Ensure all game controls and interactive elements fit within standard phone screens
+- Level information shall be inline with title (e.g., "Quiz - Level 3" or "Game | Level 2")
+- All game info (level, score, record, wins, losses) shall be displayed inline in a single row
+- Don't show text messages for correct/incorrect responses
+- For correct answers: Flash a thumbs up icon (👍) with "Well Done!" text
+- For incorrect answers: Flash a thumbs down icon (👎) with "Try Again!" text
+- Use off-white background color (#f9fafb or similar) for interactive components
+- All components shall be optimally sized to work on different screen sizes
+- Design mobile-first with responsive breakpoints for larger screens
 
 When generating responses for emails, text, or messages:
 - Provide precise and clear responses addressing all queries
