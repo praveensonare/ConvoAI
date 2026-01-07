@@ -423,19 +423,31 @@ export default function Home() {
                       <div
                         className={`max-w-[85%] rounded-xl px-4 py-3 shadow-sm ${
                           message.role === 'user'
-                            ? 'bg-slate-50 text-slate-900 border border-slate-200'
+                            ? 'bg-blue-50 border border-blue-200 text-slate-800'
                             : 'bg-white border border-slate-200 text-slate-800'
                         }`}
                       >
-                        <div className="flex items-start gap-2">
-                          {message.role === 'assistant' && (
-                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <div className="flex items-start gap-3">
+                          {message.role === 'user' && (
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 mt-1 shadow-sm">
                               <svg
-                                className="w-3 h-3 text-white"
+                                className="w-5 h-5 text-white"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
                               >
-                                <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                          {message.role === 'assistant' && (
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 mt-1 shadow-sm">
+                              <svg
+                                className="w-5 h-5 text-white"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
+                                <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z" />
                               </svg>
                             </div>
                           )}
@@ -453,7 +465,7 @@ export default function Home() {
                             <p
                               className={`text-xs mt-1.5 ${
                                 message.role === 'user'
-                                  ? 'text-slate-500'
+                                  ? 'text-blue-600'
                                   : 'text-slate-400'
                               }`}
                             >
@@ -490,16 +502,17 @@ export default function Home() {
               {/* Loading indicator while AI is processing */}
               {isLoading && (
                 <div className="w-full">
-                  <div className="flex justify-start mb-3">
-                    <div className="max-w-[85%] rounded-xl px-4 py-3 shadow-sm bg-white border border-slate-200 text-slate-800">
-                      <div className="flex items-start gap-2">
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <div className="flex justify-start mb-4">
+                    <div className="max-w-[80%] rounded-2xl px-6 py-4 shadow-md bg-white border border-slate-200 text-slate-800">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 mt-1 shadow-sm">
                           <svg
-                            className="w-3 h-3 text-white"
+                            className="w-5 h-5 text-white"
                             fill="currentColor"
                             viewBox="0 0 20 20"
                           >
-                            <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                            <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
+                            <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z" />
                           </svg>
                         </div>
                         <div className="flex-1">
