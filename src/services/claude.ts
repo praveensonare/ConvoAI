@@ -31,6 +31,8 @@ function getSystemPrompt(): string {
   const enhancedInstructions = `
 Show very precise and clear responses.
 
+Don't provide explanation/feature of generating response unless user asked.
+
 When possible to show information graphically (charts, tables, visualizations), generate interactive JavaScript/HTML code that can be rendered on the interface.
 
 Try to make all graphical elements interactive with hover features and tooltips.

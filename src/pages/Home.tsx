@@ -423,7 +423,7 @@ export default function Home() {
                       <div
                         className={`max-w-[85%] rounded-xl px-4 py-3 shadow-sm ${
                           message.role === 'user'
-                            ? 'bg-blue-600 text-white'
+                            ? 'bg-slate-50 text-slate-900 border border-slate-200'
                             : 'bg-white border border-slate-200 text-slate-800'
                         }`}
                       >
@@ -453,13 +453,24 @@ export default function Home() {
                             <p
                               className={`text-xs mt-1.5 ${
                                 message.role === 'user'
-                                  ? 'text-blue-100'
+                                  ? 'text-slate-500'
                                   : 'text-slate-400'
                               }`}
                             >
                               {message.timestamp.toLocaleTimeString()}
                             </p>
                           </div>
+                          {message.role === 'user' && (
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <svg
+                                className="w-3 h-3 text-white"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
