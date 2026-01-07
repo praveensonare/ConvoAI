@@ -6,6 +6,7 @@ import MessageContent, { extractHtmlContent } from '../components/MessageContent
 import IframeRenderer from '../components/IframeRenderer';
 import ImageViewer from '../components/ImageViewer';
 import DocumentViewer from '../components/DocumentViewer';
+import ErrorPopup from '../components/ErrorPopup';
 import {
   createConversation,
   getConversation,
@@ -44,6 +45,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false); // Streaming disabled by default
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -292,30 +294,31 @@ export default function Home() {
             );
             setIsLoading(false);
           },
-          // onError: Display error
+          // onError: Display error popup
           (error: string) => {
+            // Remove the placeholder message
             setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === assistantMessageId
-                  ? {
-                      ...msg,
-                      content: `Error: ${error}`,
-                      isStreaming: false,
-                    }
-                  : msg
-              )
+              prev.filter((msg) => msg.id !== assistantMessageId)
             );
             setIsLoading(false);
+            setErrorMessage(error);
           }
         );
       } else {
         // Non-streaming mode: Wait for full response
         const response = await sendMessage(resolvedHistory);
 
+        if (response.error) {
+          // Show error popup instead of inline message
+          setIsLoading(false);
+          setErrorMessage(response.error);
+          return;
+        }
+
         const assistantMessage: Message = {
           id: assistantMessageId,
           role: 'assistant',
-          content: response.error || response.content || 'No response received.',
+          content: response.content || 'No response received.',
           timestamp: new Date(),
         };
 
@@ -323,19 +326,12 @@ export default function Home() {
         setIsLoading(false);
       }
     } catch (error) {
-      // Handle any unexpected errors
-      const errorMessage: Message = {
-        id: assistantMessageId,
-        role: 'assistant',
-        content: `Error: ${
-          error instanceof Error
-            ? error.message
-            : 'An unexpected error occurred.'
-        }`,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      // Handle any unexpected errors with popup
       setIsLoading(false);
+      const errorMsg = error instanceof Error
+        ? error.message
+        : 'An unexpected error occurred. Please contact praveen.sonare@vflowtech.com for support.';
+      setErrorMessage(errorMsg);
     }
   };
 
@@ -422,20 +418,20 @@ export default function Home() {
                     <div
                       className={`flex ${
                         message.role === 'user' ? 'justify-end' : 'justify-start'
-                      } mb-4`}
+                      } mb-3`}
                     >
                       <div
-                        className={`max-w-[80%] rounded-2xl px-6 py-4 shadow-md ${
+                        className={`max-w-[85%] rounded-xl px-4 py-3 shadow-sm ${
                           message.role === 'user'
-                            ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white'
+                            ? 'bg-blue-600 text-white'
                             : 'bg-white border border-slate-200 text-slate-800'
                         }`}
                       >
-                        <div className="flex items-start gap-3">
+                        <div className="flex items-start gap-2">
                           {message.role === 'assistant' && (
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 mt-1">
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 mt-0.5">
                               <svg
-                                className="w-4 h-4 text-white"
+                                className="w-3 h-3 text-white"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
                               >
@@ -443,8 +439,8 @@ export default function Home() {
                               </svg>
                             </div>
                           )}
-                          <div className="flex-1">
-                            <div className={`leading-relaxed ${message.role === 'user' ? 'text-base font-medium' : 'text-sm'}`}>
+                          <div className="flex-1 min-w-0">
+                            <div className={`leading-snug ${message.role === 'user' ? 'text-sm font-normal' : 'text-sm'}`}>
                               <MessageContent
                                 content={message.content}
                                 attachments={message.attachments}
@@ -455,9 +451,9 @@ export default function Home() {
                               )}
                             </div>
                             <p
-                              className={`text-xs mt-2 ${
+                              className={`text-xs mt-1.5 ${
                                 message.role === 'user'
-                                  ? 'text-indigo-100'
+                                  ? 'text-blue-100'
                                   : 'text-slate-400'
                               }`}
                             >
@@ -483,12 +479,12 @@ export default function Home() {
               {/* Loading indicator while AI is processing */}
               {isLoading && (
                 <div className="w-full">
-                  <div className="flex justify-start mb-4">
-                    <div className="max-w-[80%] rounded-2xl px-6 py-4 shadow-md bg-white border border-slate-200 text-slate-800">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 mt-1">
+                  <div className="flex justify-start mb-3">
+                    <div className="max-w-[85%] rounded-xl px-4 py-3 shadow-sm bg-white border border-slate-200 text-slate-800">
+                      <div className="flex items-start gap-2">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 mt-0.5">
                           <svg
-                            className="w-4 h-4 text-white"
+                            className="w-3 h-3 text-white"
                             fill="currentColor"
                             viewBox="0 0 20 20"
                           >
@@ -630,6 +626,14 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Error Popup */}
+      {errorMessage && (
+        <ErrorPopup
+          message={errorMessage}
+          onClose={() => setErrorMessage(null)}
+        />
+      )}
     </div>
   );
 }

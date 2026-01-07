@@ -27,8 +27,33 @@ function getSystemPrompt(): string {
   const userRole = localStorage.getItem('userRole') || '';
   const knowledgeBase = localStorage.getItem('knowledgeBase') || '';
 
-  // Combine userRole and knowledgeBase for the system message
-  const systemParts: string[] = [];
+  // Enhanced role instructions
+  const enhancedInstructions = `
+Show very precise and clear responses.
+
+When possible to show information graphically (charts, tables, visualizations), generate interactive JavaScript/HTML code that can be rendered on the interface.
+
+Try to make all graphical elements interactive with hover features and tooltips.
+
+When generating charts and analytics:
+- Use appropriate chart types based on data: bar charts, pie charts, line graphs, stacked bar charts, candlestick charts, etc.
+- Make all visualizations responsive and mobile-friendly
+- Ensure visuals work well on standard phone screens
+- Add interactivity with mouse hover features wherever possible
+
+When user seeks quiz or games:
+- Generate mobile-friendly, responsive code
+- Create competitive experiences with different difficulty levels
+- Implement progressive difficulty - move to next level as user improves
+- Make games engaging and interactive
+
+When generating responses for emails, text, or messages:
+- Provide precise and clear responses addressing all queries
+- Be concise but comprehensive
+  `.trim();
+
+  // Combine all parts
+  const systemParts: string[] = [enhancedInstructions];
 
   if (userRole) {
     systemParts.push(userRole);
@@ -42,6 +67,38 @@ function getSystemPrompt(): string {
 }
 
 /**
+ * Get API key with default fallback for first 10 conversations
+ */
+function getApiKey(): { key: string; shouldIncrementCounter: boolean } {
+  const DEFAULT_API_KEY = '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';
+
+  // Check if user has set their own API key
+  const userApiToken = localStorage.getItem('apiToken');
+
+  if (userApiToken && userApiToken.trim() !== '') {
+    return { key: userApiToken, shouldIncrementCounter: false };
+  }
+
+  // Use default key for first 10 conversations
+  const conversationCount = parseInt(localStorage.getItem('conversationCount') || '0', 10);
+
+  if (conversationCount < 10) {
+    return { key: DEFAULT_API_KEY, shouldIncrementCounter: true };
+  }
+
+  // Limit reached
+  throw new Error('Free usage limit reached (10 conversations). Please set your API key in Settings or contact praveen.sonare@vflowtech.com for a key.');
+}
+
+/**
+ * Increment conversation counter
+ */
+function incrementConversationCounter(): void {
+  const count = parseInt(localStorage.getItem('conversationCount') || '0', 10);
+  localStorage.setItem('conversationCount', (count + 1).toString());
+}
+
+/**
  * Send a message to Claude API with streaming response
  */
 export async function sendMessageStream(
@@ -51,13 +108,8 @@ export async function sendMessageStream(
   onError: (error: string) => void
 ): Promise<void> {
   try {
-    // Get API token from localStorage
-    const apiToken = localStorage.getItem('apiToken');
-
-    if (!apiToken) {
-      onError('API token not found. Please set your API token in Settings.');
-      return;
-    }
+    // Get API key (user's or default)
+    const { key: apiToken, shouldIncrementCounter } = getApiKey();
 
     // Initialize Claude client
     const client = new Anthropic({
@@ -87,14 +139,23 @@ export async function sendMessageStream(
       }
     }
 
+    // Increment counter if using default key
+    if (shouldIncrementCounter) {
+      incrementConversationCounter();
+    }
+
     onComplete();
   } catch (error) {
     console.error('Claude API Error:', error);
 
-    let errorMessage = 'An error occurred while communicating with Claude.';
+    let errorMessage = 'An error occurred while communicating with Claude. Please contact praveen.sonare@vflowtech.com for support.';
 
     if (error instanceof Error) {
       errorMessage = error.message;
+      // Add support contact for specific errors
+      if (!errorMessage.includes('vflowtech.com')) {
+        errorMessage += '\n\nFor support, contact: praveen.sonare@vflowtech.com';
+      }
     }
 
     onError(errorMessage);
@@ -108,15 +169,8 @@ export async function sendMessage(
   messages: Message[]
 ): Promise<ClaudeResponse> {
   try {
-    // Get API token from localStorage
-    const apiToken = localStorage.getItem('apiToken');
-
-    if (!apiToken) {
-      return {
-        content: '',
-        error: 'API token not found. Please set your API token in Settings.'
-      };
-    }
+    // Get API key (user's or default)
+    const { key: apiToken, shouldIncrementCounter } = getApiKey();
 
     // Initialize Claude client
     const client = new Anthropic({
@@ -144,16 +198,25 @@ export async function sendMessage(
       .map(block => 'text' in block ? block.text : '')
       .join('');
 
+    // Increment counter if using default key
+    if (shouldIncrementCounter) {
+      incrementConversationCounter();
+    }
+
     return {
       content: textContent
     };
   } catch (error) {
     console.error('Claude API Error:', error);
 
-    let errorMessage = 'An error occurred while communicating with Claude.';
+    let errorMessage = 'An error occurred while communicating with Claude. Please contact praveen.sonare@vflowtech.com for support.';
 
     if (error instanceof Error) {
       errorMessage = error.message;
+      // Add support contact for specific errors
+      if (!errorMessage.includes('vflowtech.com')) {
+        errorMessage += '\n\nFor support, contact: praveen.sonare@vflowtech.com';
+      }
     }
 
     return {
