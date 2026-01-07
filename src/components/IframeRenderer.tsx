@@ -94,57 +94,57 @@ export default function IframeRenderer({ htmlCode, height = '600px' }: IframeRen
 
   return (
     <>
-      <div className="w-full mb-6">
+      <div className="w-full mb-4">
         <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg shadow-lg border border-slate-200 overflow-hidden">
           <div className="px-3 py-2 flex items-center justify-between flex-wrap gap-2 bg-white bg-opacity-50">
             <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
               <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-              Interactive Chart
+              Interactive Visualization
             </h4>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <button
                 onClick={handlePrint}
-                className="p-2 rounded-md hover:bg-white hover:shadow-md transition-all"
+                className="p-1.5 sm:p-2 rounded-md hover:bg-white hover:shadow-md transition-all"
                 title="Print"
               >
-                <Printer size={18} />
+                <Printer size={16} className="sm:w-[18px] sm:h-[18px]" />
               </button>
               <button
                 onClick={handleDownloadPDF}
-                className="p-2 rounded-md hover:bg-white hover:shadow-md transition-all"
+                className="p-1.5 sm:p-2 rounded-md hover:bg-white hover:shadow-md transition-all"
                 title="Download as PDF"
               >
-                <FileDown size={18} />
+                <FileDown size={16} className="sm:w-[18px] sm:h-[18px]" />
               </button>
               <button
                 onClick={handleDownloadHTML}
-                className="p-2 rounded-md hover:bg-white hover:shadow-md transition-all"
+                className="p-1.5 sm:p-2 rounded-md hover:bg-white hover:shadow-md transition-all hidden sm:block"
                 title="Download HTML"
               >
                 <Download size={18} />
               </button>
-              <div className="w-px h-6 bg-slate-300 mx-1"></div>
+              <div className="w-px h-4 sm:h-6 bg-slate-300 mx-0.5 sm:mx-1"></div>
               <button
                 onClick={toggleFullscreen}
-                className="p-2 rounded-md hover:bg-white hover:shadow-md transition-all"
+                className="p-1.5 sm:p-2 rounded-md hover:bg-white hover:shadow-md transition-all"
                 title="Fullscreen"
               >
-                <Maximize2 size={18} />
+                <Maximize2 size={16} className="sm:w-[18px] sm:h-[18px]" />
               </button>
             </div>
           </div>
 
-          <div className="bg-white">
+          <div className="bg-slate-50">
             <iframe
               key={iframeKey}
               ref={iframeRef}
               sandbox="allow-scripts allow-same-origin"
-              className="w-full bg-white"
+              className="w-full bg-slate-50"
               style={{
                 height,
-                minHeight: '400px',
+                minHeight: '300px',
                 maxHeight: '800px',
                 border: 'none'
               }}
@@ -157,63 +157,63 @@ export default function IframeRenderer({ htmlCode, height = '600px' }: IframeRen
       {/* Fullscreen Modal */}
       {isFullscreen && (
         <div
-          className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-2 sm:p-4"
           onClick={toggleFullscreen}
         >
           <button
             onClick={toggleFullscreen}
-            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            className="absolute top-2 right-2 sm:top-4 sm:right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors z-10"
             title="Close"
           >
-            <X size={24} />
+            <X size={20} className="sm:w-6 sm:h-6" />
           </button>
 
-          <div className="w-full h-full max-w-[95vw] max-h-[95vh] bg-white rounded-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full h-full max-w-[98vw] sm:max-w-[95vw] max-h-[95vh] bg-slate-50 rounded-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="h-full w-full">
               <iframe
                 key={`fullscreen-${iframeKey}`}
                 srcDoc={htmlCode}
                 sandbox="allow-scripts allow-same-origin"
-                className="w-full h-full"
+                className="w-full h-full bg-slate-50"
                 style={{ border: 'none' }}
                 title="Fullscreen HTML Output"
               />
             </div>
           </div>
 
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
+          <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 sm:gap-4 bg-white/10 backdrop-blur-sm rounded-lg px-2 sm:px-4 py-1.5 sm:py-2">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handlePrint();
               }}
-              className="p-2 rounded hover:bg-white/20 text-white transition-colors flex items-center gap-2"
+              className="p-1.5 sm:p-2 rounded hover:bg-white/20 text-white transition-colors flex items-center gap-1 sm:gap-2"
               title="Print"
             >
-              <Printer size={20} />
-              <span className="text-sm font-medium">Print</span>
+              <Printer size={18} className="sm:w-5 sm:h-5" />
+              <span className="text-xs sm:text-sm font-medium hidden sm:inline">Print</span>
             </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleDownloadPDF();
               }}
-              className="p-2 rounded hover:bg-white/20 text-white transition-colors flex items-center gap-2"
+              className="p-1.5 sm:p-2 rounded hover:bg-white/20 text-white transition-colors flex items-center gap-1 sm:gap-2"
               title="Download PDF"
             >
-              <FileDown size={20} />
-              <span className="text-sm font-medium">PDF</span>
+              <FileDown size={18} className="sm:w-5 sm:h-5" />
+              <span className="text-xs sm:text-sm font-medium hidden sm:inline">PDF</span>
             </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleDownloadHTML();
               }}
-              className="p-2 rounded hover:bg-white/20 text-white transition-colors flex items-center gap-2"
+              className="p-1.5 sm:p-2 rounded hover:bg-white/20 text-white transition-colors flex items-center gap-1 sm:gap-2"
               title="Download HTML"
             >
-              <Download size={20} />
-              <span className="text-sm font-medium">HTML</span>
+              <Download size={18} className="sm:w-5 sm:h-5" />
+              <span className="text-xs sm:text-sm font-medium hidden sm:inline">HTML</span>
             </button>
           </div>
         </div>

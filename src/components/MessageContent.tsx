@@ -9,9 +9,10 @@ import IframeRenderer from './IframeRenderer';
 interface MessageContentProps {
   content: string;
   attachments?: Array<{
-    type: 'image' | 'document';
+    type: 'image' | 'document' | 'spreadsheet' | 'text' | 'csv';
     url: string;
     fileName?: string;
+    extractedContent?: string;
   }>;
   role: 'user' | 'assistant';
 }
@@ -40,12 +41,12 @@ function parseMessageContent(content: string): ParsedContent[] {
     const language = match[1] || '';
     const codeContent = match[2].trim();
 
-    // Check if HTML - mark as special type
-    if (language === 'html') {
+    // Check if HTML or JavaScript - mark as special type for full-width rendering
+    if (language === 'html' || language === 'javascript' || language === 'js') {
       parts.push({
         type: 'html',
         content: codeContent,
-        language: 'html',
+        language: language,
       });
     } else {
       parts.push({
@@ -144,11 +145,47 @@ export default function MessageContent({ content, attachments, role }: MessageCo
 // Export helper to get HTML content for full-width rendering
 export function extractHtmlContent(content: string): string[] {
   const htmlBlocks: string[] = [];
-  const codeBlockRegex = /```html\n([\s\S]*?)```/g;
+
+  // Extract HTML code blocks
+  const htmlRegex = /```html\n([\s\S]*?)```/g;
   let match;
 
-  while ((match = codeBlockRegex.exec(content)) !== null) {
+  while ((match = htmlRegex.exec(content)) !== null) {
     htmlBlocks.push(match[1].trim());
+  }
+
+  // Extract JavaScript code blocks and wrap them in HTML
+  const jsRegex = /```(?:javascript|js)\n([\s\S]*?)```/g;
+  while ((match = jsRegex.exec(content)) !== null) {
+    const jsCode = match[1].trim();
+    // Wrap JavaScript in HTML with a container
+    const wrappedHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    #app {
+      width: 100%;
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    ${jsCode}
+  </script>
+</body>
+</html>
+    `.trim();
+    htmlBlocks.push(wrappedHtml);
   }
 
   return htmlBlocks;
