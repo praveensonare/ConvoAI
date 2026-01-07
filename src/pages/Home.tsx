@@ -13,12 +13,18 @@ import {
   setCurrentConversationId,
   getCurrentConversationId,
 } from '../services/conversationStorage';
+import {
+  extractFileData,
+  getSupportedFileTypes,
+  isFileTypeSupported,
+} from '../services/fileExtractor';
 
 interface Attachment {
-  type: 'image' | 'document';
+  type: 'image' | 'document' | 'spreadsheet' | 'text' | 'csv';
   url: string;
   file?: File;
   fileName?: string;
+  extractedContent?: string;
 }
 
 interface Message {
@@ -110,22 +116,44 @@ export default function Home() {
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+
+      // Check if file type is supported
+      if (!isFileTypeSupported(file)) {
+        alert(`File type not supported: ${file.name}`);
+        continue;
+      }
+
       const url = URL.createObjectURL(file);
 
-      if (file.type.startsWith('image/')) {
+      try {
+        // Extract file content
+        const extractedData = await extractFileData(file);
+
+        // Determine attachment type
+        let attachmentType: Attachment['type'] = 'document';
+        if (file.type.startsWith('image/')) {
+          attachmentType = 'image';
+        } else if (file.name.endsWith('.csv') || file.type === 'text/csv') {
+          attachmentType = 'csv';
+        } else if (
+          file.name.match(/\.(xls|xlsx)$/i) ||
+          file.type.includes('spreadsheet')
+        ) {
+          attachmentType = 'spreadsheet';
+        } else if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+          attachmentType = 'text';
+        }
+
         newAttachments.push({
-          type: 'image',
+          type: attachmentType,
           url,
           file,
           fileName: file.name,
+          extractedContent: extractedData.content,
         });
-      } else if (file.type === 'application/pdf') {
-        newAttachments.push({
-          type: 'document',
-          url,
-          file,
-          fileName: file.name,
-        });
+      } catch (error) {
+        console.error(`Error extracting file ${file.name}:`, error);
+        alert(`Failed to process file: ${file.name}\n${(error as Error).message}`);
       }
     }
 
@@ -167,10 +195,27 @@ export default function Home() {
     try {
       // Convert messages to format expected by Claude API
       const conversationHistory = [...messages, userMessage].map(async (msg) => {
-        // If message has image attachments, convert them
+        // If message has attachments, process them
         if (msg.attachments && msg.attachments.length > 0) {
-          const contentParts: any[] = [{ type: 'text', text: msg.content }];
+          const contentParts: any[] = [];
 
+          // First, add extracted content from non-image files
+          const extractedContents: string[] = [];
+          for (const attachment of msg.attachments) {
+            if (attachment.extractedContent && attachment.type !== 'image') {
+              extractedContents.push(attachment.extractedContent);
+            }
+          }
+
+          // Combine user message with extracted file contents
+          let messageText = msg.content;
+          if (extractedContents.length > 0) {
+            messageText = `${extractedContents.join('\n\n---\n\n')}\n\n${msg.content}`;
+          }
+
+          contentParts.push({ type: 'text', text: messageText });
+
+          // Then, add images
           for (const attachment of msg.attachments) {
             if (attachment.type === 'image' && attachment.file) {
               try {
@@ -183,6 +228,14 @@ export default function Home() {
                     data: base64Data,
                   },
                 });
+
+                // Also add OCR extracted text if available
+                if (attachment.extractedContent) {
+                  contentParts.push({
+                    type: 'text',
+                    text: `\n${attachment.extractedContent}`,
+                  });
+                }
               } catch (error) {
                 console.error('Error converting image to base64:', error);
               }
@@ -323,9 +376,9 @@ export default function Home() {
                   Welcome to ConvoAI
                 </h2>
                 <p className="text-slate-600 max-w-md mx-auto">
-                  Start a conversation with Claude. Upload images, documents, or
-                  ask for visualizations and charts. Your AI assistant is ready to
-                  help!
+                  Start a conversation with Claude. Upload files (images, PDFs,
+                  Excel, CSV, text, PowerPoint) or ask for visualizations and
+                  charts. Your AI assistant is ready to help!
                 </p>
               </div>
             </div>
@@ -466,33 +519,59 @@ export default function Home() {
           {/* Attachments Preview */}
           {attachments.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-2">
-              {attachments.map((attachment, index) => (
-                <div
-                  key={index}
-                  className="relative group bg-slate-100 border border-slate-200 rounded-lg p-2 flex items-center gap-2"
-                >
-                  {attachment.type === 'image' ? (
-                    <img
-                      src={attachment.url}
-                      alt={attachment.fileName}
-                      className="w-12 h-12 object-cover rounded"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 bg-red-100 rounded flex items-center justify-center text-red-600 text-xs font-bold">
-                      PDF
-                    </div>
-                  )}
-                  <span className="text-xs text-slate-600 max-w-[100px] truncate">
-                    {attachment.fileName}
-                  </span>
-                  <button
-                    onClick={() => removeAttachment(index)}
-                    className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+              {attachments.map((attachment, index) => {
+                let bgColor = 'bg-blue-100';
+                let textColor = 'text-blue-600';
+                let label = 'FILE';
+
+                if (attachment.type === 'document') {
+                  bgColor = 'bg-red-100';
+                  textColor = 'text-red-600';
+                  label = 'PDF';
+                } else if (attachment.type === 'spreadsheet') {
+                  bgColor = 'bg-green-100';
+                  textColor = 'text-green-600';
+                  label = 'XLS';
+                } else if (attachment.type === 'csv') {
+                  bgColor = 'bg-yellow-100';
+                  textColor = 'text-yellow-600';
+                  label = 'CSV';
+                } else if (attachment.type === 'text') {
+                  bgColor = 'bg-gray-100';
+                  textColor = 'text-gray-600';
+                  label = 'TXT';
+                }
+
+                return (
+                  <div
+                    key={index}
+                    className="relative group bg-slate-100 border border-slate-200 rounded-lg p-2 flex items-center gap-2"
                   >
-                    <X size={12} />
-                  </button>
-                </div>
-              ))}
+                    {attachment.type === 'image' ? (
+                      <img
+                        src={attachment.url}
+                        alt={attachment.fileName}
+                        className="w-12 h-12 object-cover rounded"
+                      />
+                    ) : (
+                      <div
+                        className={`w-12 h-12 ${bgColor} rounded flex items-center justify-center ${textColor} text-xs font-bold`}
+                      >
+                        {label}
+                      </div>
+                    )}
+                    <span className="text-xs text-slate-600 max-w-[100px] truncate">
+                      {attachment.fileName}
+                    </span>
+                    <button
+                      onClick={() => removeAttachment(index)}
+                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -502,14 +581,14 @@ export default function Home() {
               ref={fileInputRef}
               onChange={handleFileSelect}
               className="hidden"
-              accept="image/*,.pdf"
+              accept={getSupportedFileTypes()}
               multiple
             />
             <div className="flex items-end gap-2 p-3">
               <button
                 onClick={handleFileClick}
                 className="p-2 rounded-lg hover:bg-slate-100 transition-colors text-slate-600 flex-shrink-0"
-                title="Attach files (images & PDFs)"
+                title="Attach files (images, PDFs, Excel, CSV, text, PowerPoint)"
                 disabled={isLoading}
               >
                 <Paperclip size={20} />

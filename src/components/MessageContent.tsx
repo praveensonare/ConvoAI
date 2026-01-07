@@ -9,9 +9,10 @@ import IframeRenderer from './IframeRenderer';
 interface MessageContentProps {
   content: string;
   attachments?: Array<{
-    type: 'image' | 'document';
+    type: 'image' | 'document' | 'spreadsheet' | 'text' | 'csv';
     url: string;
     fileName?: string;
+    extractedContent?: string;
   }>;
   role: 'user' | 'assistant';
 }

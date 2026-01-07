@@ -1,8 +1,9 @@
 export interface Attachment {
-  type: 'image' | 'document';
+  type: 'image' | 'document' | 'spreadsheet' | 'text' | 'csv';
   url: string;
   file?: File;
   fileName?: string;
+  extractedContent?: string;
 }
 
 export interface Message {
