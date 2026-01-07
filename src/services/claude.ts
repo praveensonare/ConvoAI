@@ -125,7 +125,7 @@ export async function sendMessageStream(
     // Make streaming API call to Claude
     const stream = await client.messages.stream({
       model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 8192,
+      max_tokens: 24576,
       system: systemPrompt || undefined,
       messages: messages.map(msg => ({
         role: msg.role,
@@ -186,7 +186,7 @@ export async function sendMessage(
     // Make API call to Claude
     const response = await client.messages.create({
       model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 8192,
+      max_tokens: 24576,
       system: systemPrompt || undefined, // Only include if not empty
       messages: messages.map(msg => ({
         role: msg.role,
