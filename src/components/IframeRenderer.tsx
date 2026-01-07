@@ -136,12 +136,12 @@ export default function IframeRenderer({ htmlCode, height = '600px' }: IframeRen
             </div>
           </div>
 
-          <div className="bg-white">
+          <div className="bg-slate-50">
             <iframe
               key={iframeKey}
               ref={iframeRef}
               sandbox="allow-scripts allow-same-origin"
-              className="w-full bg-white"
+              className="w-full bg-slate-50"
               style={{
                 height,
                 minHeight: '300px',
@@ -168,13 +168,13 @@ export default function IframeRenderer({ htmlCode, height = '600px' }: IframeRen
             <X size={20} className="sm:w-6 sm:h-6" />
           </button>
 
-          <div className="w-full h-full max-w-[98vw] sm:max-w-[95vw] max-h-[95vh] bg-white rounded-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full h-full max-w-[98vw] sm:max-w-[95vw] max-h-[95vh] bg-slate-50 rounded-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="h-full w-full">
               <iframe
                 key={`fullscreen-${iframeKey}`}
                 srcDoc={htmlCode}
                 sandbox="allow-scripts allow-same-origin"
-                className="w-full h-full"
+                className="w-full h-full bg-slate-50"
                 style={{ border: 'none' }}
                 title="Fullscreen HTML Output"
               />

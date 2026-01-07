@@ -77,7 +77,7 @@ When generating responses for emails, text, or messages:
 }
 
 /**
- * Get API key with default fallback for first 10 conversations
+ * Get API key with default fallback for first 50 conversations
  */
 function getApiKey(): { key: string; shouldIncrementCounter: boolean } {
   const DEFAULT_API_KEY = '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';
@@ -89,15 +89,15 @@ function getApiKey(): { key: string; shouldIncrementCounter: boolean } {
     return { key: userApiToken, shouldIncrementCounter: false };
   }
 
-  // Use default key for first 10 conversations
+  // Use default key for first 50 conversations
   const conversationCount = parseInt(localStorage.getItem('conversationCount') || '0', 10);
 
-  if (conversationCount < 10) {
+  if (conversationCount < 50) {
     return { key: DEFAULT_API_KEY, shouldIncrementCounter: true };
   }
 
   // Limit reached
-  throw new Error('Free usage limit reached (10 conversations). Please set your API key in Settings or contact praveen.sonare@vflowtech.com for a key.');
+  throw new Error('Free usage limit reached (50 conversations). Please set your API key in Settings or contact praveen.sonare@vflowtech.com for a key.');
 }
 
 /**
