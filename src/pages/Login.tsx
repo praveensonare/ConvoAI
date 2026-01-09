@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { LogIn, Brain, Mail, Lock } from 'lucide-react';
 
 export default function Login() {
-  const [email, setEmail] = useState('trailuser');
+  const [email, setEmail] = useState('trialUser@gmail.com');
   const [password, setPassword] = useState('trial user');
   const navigate = useNavigate();
 
