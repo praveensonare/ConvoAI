@@ -3,8 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { LogIn, Brain, Mail, Lock } from 'lucide-react';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('trailuser');
+  const [password, setPassword] = useState('trial user');
   const navigate = useNavigate();
 
   const handleLogin = (e: React.FormEvent) => {
