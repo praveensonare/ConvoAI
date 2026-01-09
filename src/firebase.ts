@@ -3,7 +3,15 @@ import { initializeApp } from 'firebase/app';
 import { getAnalytics } from "firebase/analytics";
 import { getDatabase } from 'firebase/database';
 import { getStorage } from "firebase/storage";
-import { getAuth, signInWithPopup, GoogleAuthProvider, OAuthProvider } from "firebase/auth";
+import {
+  getAuth,
+  signInWithPopup,
+  GoogleAuthProvider,
+  OAuthProvider,
+  sendSignInLinkToEmail,
+  isSignInWithEmailLink,
+  signInWithEmailLink
+} from "firebase/auth";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -35,5 +43,38 @@ const appleProvider = new OAuthProvider('apple.com');
 
 export const signInWithGooglePopup = () => signInWithPopup(auth, provider);
 export const signInWithApplePopup = () => signInWithPopup(auth, appleProvider);
+
+// Email Link Authentication
+export const sendLoginLinkToEmail = async (email: string) => {
+  const actionCodeSettings = {
+    // URL you want to redirect back to after email link is clicked
+    url: window.location.origin + '/login',
+    handleCodeInApp: true,
+  };
+
+  await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+  // Save the email locally so we can use it to complete sign-in
+  window.localStorage.setItem('emailForSignIn', email);
+};
+
+export const completeSignInWithEmailLink = async () => {
+  if (isSignInWithEmailLink(auth, window.location.href)) {
+    let email = window.localStorage.getItem('emailForSignIn');
+
+    if (!email) {
+      // If missing, prompt user for email (in case they opened link on different device)
+      email = window.prompt('Please provide your email for confirmation');
+    }
+
+    if (email) {
+      const result = await signInWithEmailLink(auth, email, window.location.href);
+      window.localStorage.removeItem('emailForSignIn');
+      return result;
+    }
+  }
+  return null;
+};
+
+export { isSignInWithEmailLink };
 
 export default firebase;

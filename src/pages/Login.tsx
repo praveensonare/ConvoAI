@@ -1,12 +1,66 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Brain } from 'lucide-react';
-import { signInWithGooglePopup } from '../firebase';
+import { Brain, Mail } from 'lucide-react';
+import { signInWithGooglePopup, sendLoginLinkToEmail, completeSignInWithEmailLink, isSignInWithEmailLink, auth } from '../firebase';
 
 export default function Login() {
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailLinkLoading, setEmailLinkLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailLinkSent, setEmailLinkSent] = useState(false);
   const navigate = useNavigate();
+
+  // Check if user is returning from email link
+  useEffect(() => {
+    const handleEmailLink = async () => {
+      if (isSignInWithEmailLink(auth, window.location.href)) {
+        setLoading(true);
+        try {
+          const result = await completeSignInWithEmailLink();
+          if (result) {
+            // Store user data in localStorage
+            localStorage.setItem('isAuthenticated', 'true');
+            localStorage.setItem('userEmail', result.user.email || '');
+            localStorage.setItem('userName', result.user.displayName || '');
+            localStorage.setItem('userProfile', JSON.stringify({
+              uid: result.user.uid,
+              email: result.user.email,
+              displayName: result.user.displayName,
+              photoURL: result.user.photoURL
+            }));
+            navigate('/');
+          }
+        } catch (err: any) {
+          console.error('Error completing sign-in with email link:', err);
+          setError(err.message || 'Failed to complete sign-in');
+          setLoading(false);
+        }
+      }
+    };
+
+    handleEmailLink();
+  }, [navigate]);
+
+  const handleSendEmailLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      setError('Please enter your email address');
+      return;
+    }
+
+    try {
+      setEmailLinkLoading(true);
+      setError(null);
+      await sendLoginLinkToEmail(email);
+      setEmailLinkSent(true);
+      setEmailLinkLoading(false);
+    } catch (err: any) {
+      console.error('Error sending email link:', err);
+      setError(err.message || 'Failed to send login link');
+      setEmailLinkLoading(false);
+    }
+  };
 
   const handleGoogleLogin = async () => {
     try {
@@ -45,7 +99,7 @@ export default function Login() {
                 <Brain className="text-white" size={32} />
               </div>
               <h1 className="text-2xl font-bold text-slate-800 mb-1">Welcome to ConvoAI</h1>
-              <p className="text-slate-500 text-sm">Sign in with your Google account to continue</p>
+              <p className="text-slate-500 text-sm">Sign in with email link or Google to continue</p>
             </div>
 
             {error && (
@@ -53,6 +107,61 @@ export default function Login() {
                 <p className="text-red-600 text-sm">{error}</p>
               </div>
             )}
+
+            {emailLinkSent && (
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl">
+                <p className="text-green-700 text-sm font-medium mb-1">📧 Email link sent to your email!</p>
+                <p className="text-green-600 text-xs">Check your inbox (and spam folder) for the login link.</p>
+              </div>
+            )}
+
+            {/* Email Link Login Form */}
+            <form onSubmit={handleSendEmailLink} className="space-y-4 mb-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+                  <Mail size={16} />
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-slate-800 placeholder:text-slate-400 shadow-sm transition-all"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={emailLinkLoading}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {emailLinkLoading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Sending Link...
+                  </>
+                ) : (
+                  <>
+                    <Mail size={20} />
+                    Send Login Link
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-white text-slate-500">Or continue with</span>
+              </div>
+            </div>
 
             <button
               onClick={handleGoogleLogin}
