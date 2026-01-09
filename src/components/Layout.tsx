@@ -3,6 +3,8 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Home, Brain, BookOpen, Settings, User, LogOut, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import ConversationList from './ConversationList';
 import { getCurrentConversationId } from '../services/conversationStorage';
+import { auth } from '../firebase';
+import { signOut } from 'firebase/auth';
 
 export default function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -26,9 +28,14 @@ export default function Layout() {
     setIsSidebarOpen(false);
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      localStorage.clear();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   const handleSelectConversation = (conversationId: string) => {
