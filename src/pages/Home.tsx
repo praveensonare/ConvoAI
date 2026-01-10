@@ -50,12 +50,42 @@ export default function Home() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showWhatsAppPopup, setShowWhatsAppPopup] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Get authentication status and message count
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
   const userMessageCount = parseInt(localStorage.getItem('userMessageCount') || '0', 10);
+
+  // Subject and topics data
+  const subjectsData: Record<string, string[]> = {
+    'Mathematics': ['Numbers', 'Addition', 'Subtraction', 'Multiplication', 'Division', 'Fractions', 'Decimals', 'Measurement', 'Shapes', 'Data'],
+    'Science': ['Animals', 'Plants', 'Human Body', 'Materials', 'Matter', 'Forces', 'Light', 'Sound', 'Space', 'Experiments'],
+    'English': ['Phonics', 'Reading', 'Vocabulary', 'Grammar', 'Punctuation', 'Writing', 'Speaking', 'Listening', 'Spelling', 'Poetry'],
+    'Chinese': ['Pinyin', 'Characters', 'Reading', 'Writing', 'Vocabulary', 'Grammar', 'Listening', 'Speaking', 'Culture', 'Stories'],
+    'Spanish': ['Alphabet', 'Vocabulary', 'Sentences', 'Verbs', 'Reading', 'Writing', 'Listening', 'Speaking', 'Culture', 'Stories'],
+    'German': ['Alphabet', 'Vocabulary', 'Articles', 'Sentences', 'Verbs', 'Reading', 'Writing', 'Listening', 'Speaking', 'Culture'],
+    'Hindi': ['Script', 'Reading', 'Writing', 'Vocabulary', 'Sentences', 'Grammar', 'Listening', 'Speaking', 'Stories', 'Culture'],
+    'History': ['Community', 'Civilizations', 'Figures', 'Events', 'Timelines', 'Changes', 'Royalty', 'Past Life', 'Sources', 'Heritage'],
+    'Geography': ['Maps', 'Continents', 'Countries', 'Features', 'Weather', 'Climate', 'Cities', 'Resources', 'Culture', 'Fieldwork'],
+    'Computing': ['Basics', 'Keyboard', 'Word Processing', 'Research', 'Safety', 'Coding', 'Content', 'Data', 'Presentations', 'Problems']
+  };
+
+  // Subject colors for buttons
+  const subjectColors: Record<string, { bg: string; hover: string; border: string; icon: string }> = {
+    'Mathematics': { bg: 'from-blue-50 to-blue-100', hover: 'hover:from-blue-100 hover:to-blue-200', border: 'border-blue-300', icon: 'bg-blue-500' },
+    'Science': { bg: 'from-green-50 to-green-100', hover: 'hover:from-green-100 hover:to-green-200', border: 'border-green-300', icon: 'bg-green-500' },
+    'English': { bg: 'from-purple-50 to-purple-100', hover: 'hover:from-purple-100 hover:to-purple-200', border: 'border-purple-300', icon: 'bg-purple-500' },
+    'Chinese': { bg: 'from-red-50 to-red-100', hover: 'hover:from-red-100 hover:to-red-200', border: 'border-red-300', icon: 'bg-red-500' },
+    'Spanish': { bg: 'from-yellow-50 to-yellow-100', hover: 'hover:from-yellow-100 hover:to-yellow-200', border: 'border-yellow-300', icon: 'bg-yellow-500' },
+    'German': { bg: 'from-gray-50 to-gray-100', hover: 'hover:from-gray-100 hover:to-gray-200', border: 'border-gray-300', icon: 'bg-gray-500' },
+    'Hindi': { bg: 'from-orange-50 to-orange-100', hover: 'hover:from-orange-100 hover:to-orange-200', border: 'border-orange-300', icon: 'bg-orange-500' },
+    'History': { bg: 'from-amber-50 to-amber-100', hover: 'hover:from-amber-100 hover:to-amber-200', border: 'border-amber-300', icon: 'bg-amber-500' },
+    'Geography': { bg: 'from-teal-50 to-teal-100', hover: 'hover:from-teal-100 hover:to-teal-200', border: 'border-teal-300', icon: 'bg-teal-500' },
+    'Computing': { bg: 'from-indigo-50 to-indigo-100', hover: 'hover:from-indigo-100 hover:to-indigo-200', border: 'border-indigo-300', icon: 'bg-indigo-500' }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -89,6 +119,26 @@ export default function Home() {
   const handleLoginRedirect = () => {
     setShowLoginPrompt(false);
     navigate('/login');
+  };
+
+  // Handle subject selection
+  const handleSubjectSelect = (subject: string) => {
+    setSelectedSubject(subject);
+    setSelectedTopic(null);
+  };
+
+  // Handle topic selection and start learning
+  const handleTopicSelect = (topic: string) => {
+    setSelectedTopic(topic);
+    // Auto-start the learning conversation
+    const learningMessage = `I want to learn about ${topic} in ${selectedSubject}.`;
+    handlePremadeQuestion(learningMessage);
+  };
+
+  // Reset to subject selection
+  const handleBackToSubjects = () => {
+    setSelectedSubject(null);
+    setSelectedTopic(null);
   };
 
   // Load or create conversation on mount and when URL changes
@@ -519,106 +569,86 @@ export default function Home() {
         <div className="max-w-3xl mx-auto">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-full">
-              <div className="text-center space-y-6 max-w-2xl mx-auto">
-                <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-2xl">
-                  <svg
-                    className="w-10 h-10 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-                    />
+              <div className="text-center space-y-6 max-w-4xl mx-auto px-4">
+                {/* AZ Tutor Header */}
+                <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-2xl">
+                  <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                   </svg>
                 </div>
-                <h2 className="text-2xl font-bold text-slate-800">
-                  Welcome to ConvoAI
-                </h2>
-                <p className="text-slate-600 max-w-md mx-auto">
-                  Start a conversation with Claude. Upload files (images, PDFs,
-                  Excel, CSV, text, PowerPoint) or ask for visualizations and
-                  charts. Your AI assistant is ready to help!
+                <h1 className="text-3xl font-bold text-slate-800">
+                  I'm your AZ Tutor
+                </h1>
+                <p className="text-xl text-slate-600">
+                  Hello! What would you like to learn today?
                 </p>
 
-                {/* Premade Questions Section */}
-                <div className="mt-8">
-                  <h3 className="text-lg font-semibold text-slate-700 mb-4">
-                    Quick Start Questions
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <button
-                      onClick={() => handlePremadeQuestion('I want to learn addition.')}
-                      className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border-2 border-blue-300 rounded-xl text-left transition-all shadow-sm hover:shadow-md group"
-                      disabled={isLoading}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                          </svg>
-                        </div>
-                        <span className="text-slate-700 font-medium group-hover:text-blue-700">
-                          I want to learn addition.
-                        </span>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => handlePremadeQuestion('I want to learn shapes')}
-                      className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border-2 border-purple-300 rounded-xl text-left transition-all shadow-sm hover:shadow-md group"
-                      disabled={isLoading}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                          </svg>
-                        </div>
-                        <span className="text-slate-700 font-medium group-hover:text-purple-700">
-                          I want to learn shapes
-                        </span>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => handlePremadeQuestion('I want to learn alphabets')}
-                      className="p-4 bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 border-2 border-green-300 rounded-xl text-left transition-all shadow-sm hover:shadow-md group"
-                      disabled={isLoading}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                          </svg>
-                        </div>
-                        <span className="text-slate-700 font-medium group-hover:text-green-700">
-                          I want to learn alphabets
-                        </span>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => handlePremadeQuestion('I want to play Country - capital and state capital for india.')}
-                      className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 border-2 border-orange-300 rounded-xl text-left transition-all shadow-sm hover:shadow-md group"
-                      disabled={isLoading}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </div>
-                        <span className="text-slate-700 font-medium group-hover:text-orange-700">
-                          Country - capital and state capital for India
-                        </span>
-                      </div>
-                    </button>
+                {/* Show Subject Selection or Topic Selection */}
+                {!selectedSubject ? (
+                  <div className="mt-8">
+                    <h3 className="text-lg font-semibold text-slate-700 mb-6">
+                      Choose a Subject
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                      {Object.keys(subjectsData).map((subject) => {
+                        const colors = subjectColors[subject];
+                        return (
+                          <button
+                            key={subject}
+                            onClick={() => handleSubjectSelect(subject)}
+                            className={`p-4 bg-gradient-to-br ${colors.bg} ${colors.hover} border-2 ${colors.border} rounded-xl text-center transition-all shadow-sm hover:shadow-md hover:scale-105 group`}
+                            disabled={isLoading}
+                          >
+                            <div className="flex flex-col items-center gap-2">
+                              <div className={`w-12 h-12 ${colors.icon} rounded-lg flex items-center justify-center flex-shrink-0 shadow-md`}>
+                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                </svg>
+                              </div>
+                              <span className="text-sm font-semibold text-slate-700">
+                                {subject}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="mt-8">
+                    <div className="flex items-center justify-center gap-3 mb-6">
+                      <button
+                        onClick={handleBackToSubjects}
+                        className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Back to Subjects
+                      </button>
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-700 mb-6">
+                      Select a Topic in {selectedSubject}
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                      {subjectsData[selectedSubject].map((topic) => {
+                        const colors = subjectColors[selectedSubject];
+                        return (
+                          <button
+                            key={topic}
+                            onClick={() => handleTopicSelect(topic)}
+                            className={`p-3 bg-gradient-to-br ${colors.bg} ${colors.hover} border-2 ${colors.border} rounded-lg text-center transition-all shadow-sm hover:shadow-md hover:scale-105`}
+                            disabled={isLoading}
+                          >
+                            <span className="text-sm font-medium text-slate-700">
+                              {topic}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
