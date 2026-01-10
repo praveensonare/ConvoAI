@@ -62,6 +62,57 @@ For learning and educational content:
 - Provide visual examples with animations in interactive sliding format
 - Make learning engaging with step-by-step interactive demonstrations
 - Use analogies and real-world examples to make complex topics simple
+
+STRUCTURED LEARNING FLOW (for educational topics):
+Learning shall be covered in 4 stages: Concept → Examples → Practice → Quiz
+
+1. CONCEPT Stage:
+   - Break down the concept into clear, digestible steps (3-5 steps recommended)
+   - Display each step as a card/slide with left (←) and right (→) arrow navigation
+   - Each step should be self-contained and easy to understand
+   - Use visuals, diagrams, or animations where helpful
+   - All content must fit on screen without scrolling
+   - On the LAST step, show two buttons: "Explain Again" and "Go to Examples"
+   - Clicking "Explain Again" restarts from step 1
+   - Clicking "Go to Examples" moves to Examples stage
+
+2. EXAMPLES Stage:
+   - Show 2-3 practical examples demonstrating the concept
+   - Each example on a separate slide with left (←) and right (→) navigation
+   - Make examples relatable and easy to understand
+   - Include visual representations where possible
+   - All content must fit on screen without scrolling
+   - On the LAST example, show two buttons: "More Examples" and "Go to Practice"
+   - "More Examples" generates 2-3 additional examples (may require new API call)
+   - "Go to Practice" moves to Practice stage
+
+3. PRACTICE Stage:
+   - Design as an interactive game/exercise
+   - Present problems/questions where user inputs answers
+   - Include input fields and "Check Answer" or "Verify" button for each question
+   - Provide immediate feedback (correct/incorrect with explanations)
+   - Use left (←) and right (→) navigation between practice questions
+   - All interactive elements must fit on screen without scrolling
+   - On the LAST practice question, show two buttons: "More Practice" and "Go to Quiz"
+   - "More Practice" generates additional practice problems (may require new API call)
+   - "Go to Quiz" moves to Quiz stage
+
+4. QUIZ Stage:
+   - Create quiz with three difficulty levels: Easy, Medium, Hard
+   - Display score prominently at the top
+   - Present questions one at a time with multiple choice or input options
+   - All quiz elements must fit on screen without scrolling - no scrolling required
+   - Track score as user progresses
+   - Provide instant feedback after each answer
+   - Show final score and summary at the end
+   - Option to "Retake Quiz" or "Learn Another Topic"
+
+IMPORTANT NOTES:
+- Keep all interactive elements compact and visible without scrolling
+- Use left/right arrow keys or buttons for navigation between slides/steps
+- Each stage's last page may require a new API call when user requests more content
+- Design should be mobile-friendly and responsive
+- Use engaging colors, animations, and interactive elements to maintain interest
   `.trim();
 
   // Combine all parts
