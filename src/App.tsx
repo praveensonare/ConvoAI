@@ -19,17 +19,15 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route
           path="/"
-          element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }
+          element={<Layout />}
         >
+          {/* Home page is accessible without authentication */}
           <Route index element={<Home />} />
-          <Route path="role" element={<Role />} />
-          <Route path="kb" element={<Knowledge />} />
-          <Route path="setting" element={<Settings />} />
-          <Route path="profile" element={<Profile />} />
+          {/* Protected routes require authentication */}
+          <Route path="role" element={<ProtectedRoute><Role /></ProtectedRoute>} />
+          <Route path="kb" element={<ProtectedRoute><Knowledge /></ProtectedRoute>} />
+          <Route path="setting" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

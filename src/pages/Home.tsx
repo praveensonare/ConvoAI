@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Send, Paperclip, X } from 'lucide-react';
 import { sendMessageStream, sendMessage, fileToBase64 } from '../services/claude';
 import MessageContent, { extractHtmlContent } from '../components/MessageContent';
@@ -7,6 +7,7 @@ import IframeRenderer from '../components/IframeRenderer';
 import ImageViewer from '../components/ImageViewer';
 import DocumentViewer from '../components/DocumentViewer';
 import ErrorPopup from '../components/ErrorPopup';
+import WhatsAppPopup from '../components/WhatsAppPopup';
 import {
   createConversation,
   getConversation,
@@ -39,6 +40,7 @@ interface Message {
 
 export default function Home() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [currentConversationId, setCurrentConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -46,11 +48,47 @@ export default function Home() {
   const [isStreaming, setIsStreaming] = useState(false); // Streaming disabled by default
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showWhatsAppPopup, setShowWhatsAppPopup] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Get authentication status and message count
+  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  const userMessageCount = parseInt(localStorage.getItem('userMessageCount') || '0', 10);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // Check if user can send message based on message count and authentication
+  const canSendMessage = (): { canSend: boolean; reason?: string } => {
+    if (!isAuthenticated) {
+      // First 7 messages are free without login
+      if (userMessageCount >= 7) {
+        return { canSend: false, reason: 'login_required' };
+      }
+      return { canSend: true };
+    }
+
+    // After login, allow up to 40 messages
+    if (userMessageCount >= 40) {
+      return { canSend: false, reason: 'upgrade_required' };
+    }
+
+    return { canSend: true };
+  };
+
+  // Increment user message count
+  const incrementMessageCount = () => {
+    const count = parseInt(localStorage.getItem('userMessageCount') || '0', 10);
+    localStorage.setItem('userMessageCount', (count + 1).toString());
+  };
+
+  // Handle login redirect
+  const handleLoginRedirect = () => {
+    setShowLoginPrompt(false);
+    navigate('/login');
   };
 
   // Load or create conversation on mount and when URL changes
@@ -178,6 +216,20 @@ export default function Home() {
   const handleSend = async () => {
     if (!input.trim() && attachments.length === 0) return;
 
+    // Check if user can send message
+    const messageCheck = canSendMessage();
+    if (!messageCheck.canSend) {
+      if (messageCheck.reason === 'login_required') {
+        // Show login prompt for users who have sent 7 messages
+        setShowLoginPrompt(true);
+        return;
+      } else if (messageCheck.reason === 'upgrade_required') {
+        // Show WhatsApp popup for users who have sent 40 messages
+        setShowWhatsAppPopup(true);
+        return;
+      }
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -190,6 +242,9 @@ export default function Home() {
     setInput('');
     setAttachments([]);
     setIsLoading(true);
+
+    // Increment message count
+    incrementMessageCount();
 
     // Create placeholder for assistant message
     const assistantMessageId = (Date.now() + 1).toString();
@@ -347,6 +402,18 @@ export default function Home() {
   };
 
   const handlePremadeQuestion = (question: string) => {
+    // Check if user can send message
+    const messageCheck = canSendMessage();
+    if (!messageCheck.canSend) {
+      if (messageCheck.reason === 'login_required') {
+        setShowLoginPrompt(true);
+        return;
+      } else if (messageCheck.reason === 'upgrade_required') {
+        setShowWhatsAppPopup(true);
+        return;
+      }
+    }
+
     setInput(question);
     // Trigger send after input is set
     setTimeout(() => {
@@ -360,6 +427,9 @@ export default function Home() {
       setMessages((prev) => [...prev, userMessage]);
       setInput('');
       setIsLoading(true);
+
+      // Increment message count
+      incrementMessageCount();
 
       // Create placeholder for assistant message
       const assistantMessageId = (Date.now() + 1).toString();
@@ -795,17 +865,29 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center justify-between mt-3">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isStreaming}
-                onChange={(e) => setIsStreaming(e.target.checked)}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span className="text-xs text-slate-600">
-                Stream responses (real-time)
-              </span>
-            </label>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isStreaming}
+                  onChange={(e) => setIsStreaming(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-xs text-slate-600">
+                  Stream responses (real-time)
+                </span>
+              </label>
+              {/* Message counter */}
+              {!isAuthenticated ? (
+                <span className="text-xs text-blue-600 font-medium">
+                  {userMessageCount}/7 free messages used
+                </span>
+              ) : (
+                <span className="text-xs text-green-600 font-medium">
+                  {userMessageCount}/40 messages used
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-500">
               Press Enter to send, Shift+Enter for new line
             </p>
@@ -819,6 +901,58 @@ export default function Home() {
           message={errorMessage}
           onClose={() => setErrorMessage(null)}
         />
+      )}
+
+      {/* Login Prompt */}
+      {showLoginPrompt && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative animate-fade-in">
+            <button
+              onClick={() => setShowLoginPrompt(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <X size={24} />
+            </button>
+
+            <div className="text-center">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+
+              <h2 className="text-2xl font-bold text-slate-800 mb-2">
+                Login Required
+              </h2>
+
+              <p className="text-slate-600 mb-6">
+                You've used your 7 free messages! Please log in to continue chatting with ConvoAI and get 40 messages total.
+              </p>
+
+              <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-xl p-4 mb-6">
+                <p className="text-sm font-semibold text-green-800 mb-2">After Login:</p>
+                <ul className="text-xs text-green-700 space-y-1 text-left">
+                  <li>✓ 40 total free messages</li>
+                  <li>✓ Save your conversations</li>
+                  <li>✓ Access from any device</li>
+                  <li>✓ Personalized experience</li>
+                </ul>
+              </div>
+
+              <button
+                onClick={handleLoginRedirect}
+                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl"
+              >
+                Go to Login
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp Popup for upgrade */}
+      {showWhatsAppPopup && (
+        <WhatsAppPopup onClose={() => setShowWhatsAppPopup(false)} />
       )}
     </div>
   );
