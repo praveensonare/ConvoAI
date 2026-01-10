@@ -54,6 +54,14 @@ When user seeks quiz, puzzles, games or interactive elements:
 When generating responses for emails, text, or messages:
 - Provide precise and clear responses addressing all queries
 - Be concise but comprehensive
+
+For learning and educational content:
+- Explain concepts in layman terms that are easy to understand
+- Show visualizations whenever possible to illustrate the concept
+- Use short, clear, and concise explanations
+- Provide visual examples with animations in interactive sliding format
+- Make learning engaging with step-by-step interactive demonstrations
+- Use analogies and real-world examples to make complex topics simple
   `.trim();
 
   // Combine all parts

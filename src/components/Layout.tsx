@@ -15,6 +15,7 @@ export default function Layout() {
   );
   const navigate = useNavigate();
   const location = useLocation();
+  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
 
   const navItems = [
     { icon: Home, label: 'Home', path: '/' },
@@ -130,46 +131,63 @@ export default function Layout() {
         </div>
 
         <div className="p-4 border-t border-slate-200 relative">
-          <button
-            onClick={() => setIsProfileOpen(!isProfileOpen)}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-100 transition-all duration-200 ${
-              isSidebarCollapsed ? 'justify-center' : ''
-            }`}
-            title={isSidebarCollapsed ? 'My Profile' : ''}
-          >
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-md flex-shrink-0">
-              <User className="text-white" size={20} />
-            </div>
-            {!isSidebarCollapsed && (
-              <div className="flex-1 text-left">
-                <p className="font-medium text-slate-800">My Profile</p>
-                <p className="text-xs text-slate-500">View & Manage</p>
-              </div>
-            )}
-          </button>
+          {isAuthenticated ? (
+            <>
+              <button
+                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-100 transition-all duration-200 ${
+                  isSidebarCollapsed ? 'justify-center' : ''
+                }`}
+                title={isSidebarCollapsed ? 'My Profile' : ''}
+              >
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-md flex-shrink-0">
+                  <User className="text-white" size={20} />
+                </div>
+                {!isSidebarCollapsed && (
+                  <div className="flex-1 text-left">
+                    <p className="font-medium text-slate-800">My Profile</p>
+                    <p className="text-xs text-slate-500">View & Manage</p>
+                  </div>
+                )}
+              </button>
 
-          {isProfileOpen && (
-            <div className={`absolute bottom-full mb-2 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden ${
-              isSidebarCollapsed ? 'left-4' : 'left-4 right-4'
-            }`}>
-              <button
-                onClick={() => {
-                  handleNavigation('/profile');
-                  setIsProfileOpen(false);
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors whitespace-nowrap"
-              >
-                <User size={18} className="text-slate-600" />
-                <span className="text-slate-700 font-medium">Profile</span>
-              </button>
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 transition-colors text-red-600 whitespace-nowrap"
-              >
-                <LogOut size={18} />
-                <span className="font-medium">Logout</span>
-              </button>
-            </div>
+              {isProfileOpen && (
+                <div className={`absolute bottom-full mb-2 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden ${
+                  isSidebarCollapsed ? 'left-4' : 'left-4 right-4'
+                }`}>
+                  <button
+                    onClick={() => {
+                      handleNavigation('/profile');
+                      setIsProfileOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors whitespace-nowrap"
+                  >
+                    <User size={18} className="text-slate-600" />
+                    <span className="text-slate-700 font-medium">Profile</span>
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 transition-colors text-red-600 whitespace-nowrap"
+                  >
+                    <LogOut size={18} />
+                    <span className="font-medium">Logout</span>
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <button
+              onClick={() => handleNavigation('/login')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg ${
+                isSidebarCollapsed ? 'justify-center' : ''
+              }`}
+              title={isSidebarCollapsed ? 'Login' : ''}
+            >
+              <User className="text-white" size={20} />
+              {!isSidebarCollapsed && (
+                <span className="font-medium">Login / Sign Up</span>
+              )}
+            </button>
           )}
         </div>
       </aside>
