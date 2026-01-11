@@ -45,7 +45,6 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isStreaming, setIsStreaming] = useState(false); // Streaming disabled by default
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showWhatsAppPopup, setShowWhatsAppPopup] = useState(false);
@@ -58,6 +57,9 @@ export default function Home() {
   // Get authentication status and message count
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
   const userMessageCount = parseInt(localStorage.getItem('userMessageCount') || '0', 10);
+
+  // Get streaming setting from localStorage
+  const isStreaming = localStorage.getItem('isStreaming') === 'true';
 
   // Subject and topics data
   const subjectsData: Record<string, string[]> = {
@@ -1007,34 +1009,6 @@ export default function Home() {
                 <Send size={20} />
               </button>
             </div>
-          </div>
-          <div className="flex items-center justify-between mt-3">
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isStreaming}
-                  onChange={(e) => setIsStreaming(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <span className="text-xs text-slate-600">
-                  Stream responses (real-time)
-                </span>
-              </label>
-              {/* Message counter */}
-              {!isAuthenticated ? (
-                <span className="text-xs text-blue-600 font-medium">
-                  {userMessageCount}/7 free messages used
-                </span>
-              ) : (
-                <span className="text-xs text-green-600 font-medium">
-                  {userMessageCount}/40 messages used
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-500">
-              Press Enter to send, Shift+Enter for new line
-            </p>
           </div>
         </div>
       </div>

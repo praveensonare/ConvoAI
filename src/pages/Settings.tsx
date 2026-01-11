@@ -1,23 +1,39 @@
 import { useState, useEffect } from 'react';
-import { Save, Settings as SettingsIcon, Key, Eye, EyeOff } from 'lucide-react';
+import { Save, Settings as SettingsIcon, Key, Eye, EyeOff, Zap, MessageSquare } from 'lucide-react';
 
 export default function Settings() {
   const [apiToken, setApiToken] = useState('');
   const [isSaved, setIsSaved] = useState(false);
   const [showToken, setShowToken] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
 
   useEffect(() => {
     const savedToken = localStorage.getItem('apiToken');
     if (savedToken) {
       setApiToken(savedToken);
     }
+
+    const streamingSetting = localStorage.getItem('isStreaming');
+    if (streamingSetting === 'true') {
+      setIsStreaming(true);
+    }
   }, []);
 
   const handleSave = () => {
     localStorage.setItem('apiToken', apiToken);
+    localStorage.setItem('isStreaming', isStreaming.toString());
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
   };
+
+  const handleStreamingToggle = (checked: boolean) => {
+    setIsStreaming(checked);
+  };
+
+  // Get message count and auth status for display
+  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  const userMessageCount = parseInt(localStorage.getItem('userMessageCount') || '0', 10);
+  const maxMessages = isAuthenticated ? 40 : 7;
 
   return (
     <div className="h-full overflow-y-auto bg-gradient-to-br from-slate-50 to-slate-100 p-6">
@@ -97,6 +113,56 @@ export default function Settings() {
                   <p className="text-xs text-slate-500 mb-1">Storage</p>
                   <p className="font-semibold text-blue-600">Local Browser</p>
                 </div>
+              </div>
+            </div>
+
+            {/* Response Settings */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 space-y-4">
+              <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+                <Zap className="text-blue-600" size={20} />
+                Response Settings
+              </h3>
+              <label className="flex items-center gap-3 cursor-pointer bg-white rounded-lg p-4 border border-slate-200 hover:border-blue-300 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={isStreaming}
+                  onChange={(e) => handleStreamingToggle(e.target.checked)}
+                  className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <div className="flex-1">
+                  <p className="font-medium text-slate-800">Stream Responses (Real-time)</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Show AI responses as they are being generated instead of waiting for completion
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            {/* Usage Statistics */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 space-y-4">
+              <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+                <MessageSquare className="text-blue-600" size={20} />
+                Usage Statistics
+              </h3>
+              <div className="bg-white rounded-lg p-4 border border-slate-200">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm text-slate-600">Messages Used</p>
+                  <p className={`font-bold text-lg ${isAuthenticated ? 'text-green-600' : 'text-blue-600'}`}>
+                    {userMessageCount} / {maxMessages}
+                  </p>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full transition-all ${isAuthenticated ? 'bg-green-500' : 'bg-blue-500'}`}
+                    style={{ width: `${(userMessageCount / maxMessages) * 100}%` }}
+                  />
+                </div>
+                <p className="text-xs text-slate-500 mt-2">
+                  {isAuthenticated
+                    ? `${maxMessages - userMessageCount} messages remaining in free tier`
+                    : `Login to unlock ${maxMessages} total messages`
+                  }
+                </p>
               </div>
             </div>
 
