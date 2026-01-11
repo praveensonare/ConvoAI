@@ -147,6 +147,16 @@ export default function Home() {
   useEffect(() => {
     const convIdFromUrl = searchParams.get('conv');
     const isNewConversation = searchParams.get('new') === 'true';
+    const showWelcome = searchParams.get('welcome') === 'true';
+
+    if (showWelcome) {
+      // Reset to welcome screen
+      setCurrentConvId(null);
+      setMessages([]);
+      setSelectedSubject(null);
+      setSelectedTopic(null);
+      return;
+    }
 
     if (convIdFromUrl) {
       // Load existing conversation

@@ -25,7 +25,13 @@ export default function Layout() {
   ];
 
   const handleNavigation = (path: string) => {
-    navigate(path);
+    // If navigating to home, reset to welcome screen
+    if (path === '/') {
+      setCurrentConvId(null);
+      navigate('/?welcome=true');
+    } else {
+      navigate(path);
+    }
     setIsSidebarOpen(false);
   };
 
