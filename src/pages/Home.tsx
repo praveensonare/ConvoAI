@@ -451,6 +451,123 @@ export default function Home() {
     fileInputRef.current?.click();
   };
 
+  // Handle button clicks from interactive content
+  const handleInteractiveButtonClick = (buttonText: string) => {
+    // Check if user can send message
+    const messageCheck = canSendMessage();
+    if (!messageCheck.canSend) {
+      if (messageCheck.reason === 'login_required') {
+        setShowLoginPrompt(true);
+        return;
+      } else if (messageCheck.reason === 'upgrade_required') {
+        setShowWhatsAppPopup(true);
+        return;
+      }
+    }
+
+    // Create user message with button text
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: buttonText,
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setIsLoading(true);
+
+    // Increment message count
+    incrementMessageCount();
+
+    // Create placeholder for assistant message
+    const assistantMessageId = (Date.now() + 1).toString();
+
+    // Prepare conversation history
+    setTimeout(async () => {
+      try {
+        const conversationHistory: { role: 'user' | 'assistant'; content: string }[] = [
+          ...messages.map((msg) => ({
+            role: msg.role,
+            content: msg.content,
+          })),
+          {
+            role: 'user',
+            content: buttonText,
+          },
+        ];
+
+        if (isStreaming) {
+          // Streaming mode
+          let streamedContent = '';
+          const assistantMessage: Message = {
+            id: assistantMessageId,
+            role: 'assistant',
+            content: '',
+            timestamp: new Date(),
+            isStreaming: true,
+          };
+          setMessages((prev) => [...prev, assistantMessage]);
+
+          await sendMessageStream(
+            conversationHistory,
+            (chunk: string) => {
+              streamedContent += chunk;
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMessageId
+                    ? { ...msg, content: streamedContent }
+                    : msg
+                )
+              );
+            },
+            () => {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMessageId
+                    ? { ...msg, isStreaming: false }
+                    : msg
+                )
+              );
+              setIsLoading(false);
+            },
+            (error: string) => {
+              setMessages((prev) =>
+                prev.filter((msg) => msg.id !== assistantMessageId)
+              );
+              setIsLoading(false);
+              setErrorMessage(error);
+            }
+          );
+        } else {
+          // Non-streaming mode
+          const response = await sendMessage(conversationHistory);
+
+          if (response.error) {
+            setIsLoading(false);
+            setErrorMessage(response.error);
+            return;
+          }
+
+          const assistantMessage: Message = {
+            id: assistantMessageId,
+            role: 'assistant',
+            content: response.content || 'No response received.',
+            timestamp: new Date(),
+          };
+
+          setMessages((prev) => [...prev, assistantMessage]);
+          setIsLoading(false);
+        }
+      } catch (error) {
+        setIsLoading(false);
+        const errorMsg = error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred. Please contact praveen.sonare@vflowtech.com for support.';
+        setErrorMessage(errorMsg);
+      }
+    }, 0);
+  };
+
   const handlePremadeQuestion = (question: string) => {
     // Check if user can send message
     const messageCheck = canSendMessage();
@@ -746,7 +863,11 @@ export default function Home() {
                     {message.role === 'assistant' && hasHtml && (
                       <div className="w-full">
                         {htmlBlocks.map((htmlCode, idx) => (
-                          <IframeRenderer key={`html-${message.id}-${idx}`} htmlCode={htmlCode} />
+                          <IframeRenderer
+                            key={`html-${message.id}-${idx}`}
+                            htmlCode={htmlCode}
+                            onButtonClick={handleInteractiveButtonClick}
+                          />
                         ))}
                       </div>
                     )}

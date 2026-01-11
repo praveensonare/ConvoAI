@@ -5,9 +5,10 @@ import html2pdf from 'html2pdf.js';
 interface IframeRendererProps {
   htmlCode: string;
   height?: string;
+  onButtonClick?: (buttonText: string) => void;
 }
 
-export default function IframeRenderer({ htmlCode, height = '600px' }: IframeRendererProps) {
+export default function IframeRenderer({ htmlCode, height = '600px', onButtonClick }: IframeRendererProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeKey, setIframeKey] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -16,6 +17,18 @@ export default function IframeRenderer({ htmlCode, height = '600px' }: IframeRen
     // Force iframe refresh when htmlCode changes
     setIframeKey(prev => prev + 1);
   }, [htmlCode]);
+
+  // Listen for messages from iframe
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'BUTTON_CLICK' && event.data?.buttonText) {
+        onButtonClick?.(event.data.buttonText);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [onButtonClick]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -27,7 +40,39 @@ export default function IframeRenderer({ htmlCode, height = '600px' }: IframeRen
 
         if (iframeDoc) {
           iframeDoc.open();
-          iframeDoc.write(htmlCode);
+
+          // Inject script to handle button clicks
+          const scriptToInject = `
+            <script>
+              // Function to handle stage transition buttons
+              function handleStageButton(buttonText) {
+                window.parent.postMessage({ type: 'BUTTON_CLICK', buttonText: buttonText }, '*');
+              }
+
+              // Auto-attach to buttons with data-stage-action attribute
+              document.addEventListener('DOMContentLoaded', function() {
+                const stageButtons = document.querySelectorAll('[data-stage-action]');
+                stageButtons.forEach(button => {
+                  button.addEventListener('click', function(e) {
+                    const buttonText = this.getAttribute('data-stage-action') || this.textContent.trim();
+                    handleStageButton(buttonText);
+                  });
+                });
+              });
+            </script>
+          `;
+
+          // Insert the script before closing </body> tag or at the end
+          let modifiedHtml = htmlCode;
+          if (htmlCode.includes('</body>')) {
+            modifiedHtml = htmlCode.replace('</body>', scriptToInject + '</body>');
+          } else if (htmlCode.includes('</html>')) {
+            modifiedHtml = htmlCode.replace('</html>', scriptToInject + '</html>');
+          } else {
+            modifiedHtml = htmlCode + scriptToInject;
+          }
+
+          iframeDoc.write(modifiedHtml);
           iframeDoc.close();
         }
       } catch (error) {
@@ -143,9 +188,9 @@ export default function IframeRenderer({ htmlCode, height = '600px' }: IframeRen
               sandbox="allow-scripts allow-same-origin"
               className="w-full bg-slate-50"
               style={{
-                height,
-                minHeight: '300px',
-                maxHeight: '800px',
+                height: '80vh',
+                minHeight: '500px',
+                maxHeight: '90vh',
                 border: 'none'
               }}
               title="Rendered HTML Output"
