@@ -148,7 +148,7 @@ Mathematics, Science, English, Chinese, Spanish, German, Hindi, History, Geograp
 REMEMBER:
 - Every response = Interactive HTML/JavaScript code ONLY
 - NO explanations, NO preamble, NO descriptions
-- Start directly with ```html or the HTML code
+- Start directly with the HTML code (no introduction text)
 - Minimal text, maximum visuals and interactivity
 - Mobile-first design
 - One-screen-per-slide (no scrolling)
