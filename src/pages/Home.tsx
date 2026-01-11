@@ -45,7 +45,6 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isStreaming, setIsStreaming] = useState(false); // Streaming disabled by default
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showWhatsAppPopup, setShowWhatsAppPopup] = useState(false);
@@ -58,6 +57,9 @@ export default function Home() {
   // Get authentication status and message count
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
   const userMessageCount = parseInt(localStorage.getItem('userMessageCount') || '0', 10);
+
+  // Get streaming setting from localStorage
+  const isStreaming = localStorage.getItem('isStreaming') === 'true';
 
   // Subject and topics data
   const subjectsData: Record<string, string[]> = {
@@ -145,6 +147,16 @@ export default function Home() {
   useEffect(() => {
     const convIdFromUrl = searchParams.get('conv');
     const isNewConversation = searchParams.get('new') === 'true';
+    const showWelcome = searchParams.get('welcome') === 'true';
+
+    if (showWelcome) {
+      // Reset to welcome screen
+      setCurrentConvId(null);
+      setMessages([]);
+      setSelectedSubject(null);
+      setSelectedTopic(null);
+      return;
+    }
 
     if (convIdFromUrl) {
       // Load existing conversation
@@ -451,6 +463,123 @@ export default function Home() {
     fileInputRef.current?.click();
   };
 
+  // Handle button clicks from interactive content
+  const handleInteractiveButtonClick = (buttonText: string) => {
+    // Check if user can send message
+    const messageCheck = canSendMessage();
+    if (!messageCheck.canSend) {
+      if (messageCheck.reason === 'login_required') {
+        setShowLoginPrompt(true);
+        return;
+      } else if (messageCheck.reason === 'upgrade_required') {
+        setShowWhatsAppPopup(true);
+        return;
+      }
+    }
+
+    // Create user message with button text
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: buttonText,
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setIsLoading(true);
+
+    // Increment message count
+    incrementMessageCount();
+
+    // Create placeholder for assistant message
+    const assistantMessageId = (Date.now() + 1).toString();
+
+    // Prepare conversation history
+    setTimeout(async () => {
+      try {
+        const conversationHistory: { role: 'user' | 'assistant'; content: string }[] = [
+          ...messages.map((msg) => ({
+            role: msg.role,
+            content: msg.content,
+          })),
+          {
+            role: 'user',
+            content: buttonText,
+          },
+        ];
+
+        if (isStreaming) {
+          // Streaming mode
+          let streamedContent = '';
+          const assistantMessage: Message = {
+            id: assistantMessageId,
+            role: 'assistant',
+            content: '',
+            timestamp: new Date(),
+            isStreaming: true,
+          };
+          setMessages((prev) => [...prev, assistantMessage]);
+
+          await sendMessageStream(
+            conversationHistory,
+            (chunk: string) => {
+              streamedContent += chunk;
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMessageId
+                    ? { ...msg, content: streamedContent }
+                    : msg
+                )
+              );
+            },
+            () => {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMessageId
+                    ? { ...msg, isStreaming: false }
+                    : msg
+                )
+              );
+              setIsLoading(false);
+            },
+            (error: string) => {
+              setMessages((prev) =>
+                prev.filter((msg) => msg.id !== assistantMessageId)
+              );
+              setIsLoading(false);
+              setErrorMessage(error);
+            }
+          );
+        } else {
+          // Non-streaming mode
+          const response = await sendMessage(conversationHistory);
+
+          if (response.error) {
+            setIsLoading(false);
+            setErrorMessage(response.error);
+            return;
+          }
+
+          const assistantMessage: Message = {
+            id: assistantMessageId,
+            role: 'assistant',
+            content: response.content || 'No response received.',
+            timestamp: new Date(),
+          };
+
+          setMessages((prev) => [...prev, assistantMessage]);
+          setIsLoading(false);
+        }
+      } catch (error) {
+        setIsLoading(false);
+        const errorMsg = error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred. Please contact praveen.sonare@vflowtech.com for support.';
+        setErrorMessage(errorMsg);
+      }
+    }, 0);
+  };
+
   const handlePremadeQuestion = (question: string) => {
     // Check if user can send message
     const messageCheck = canSendMessage();
@@ -746,7 +875,11 @@ export default function Home() {
                     {message.role === 'assistant' && hasHtml && (
                       <div className="w-full">
                         {htmlBlocks.map((htmlCode, idx) => (
-                          <IframeRenderer key={`html-${message.id}-${idx}`} htmlCode={htmlCode} />
+                          <IframeRenderer
+                            key={`html-${message.id}-${idx}`}
+                            htmlCode={htmlCode}
+                            onButtonClick={handleInteractiveButtonClick}
+                          />
                         ))}
                       </div>
                     )}
@@ -886,34 +1019,6 @@ export default function Home() {
                 <Send size={20} />
               </button>
             </div>
-          </div>
-          <div className="flex items-center justify-between mt-3">
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isStreaming}
-                  onChange={(e) => setIsStreaming(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <span className="text-xs text-slate-600">
-                  Stream responses (real-time)
-                </span>
-              </label>
-              {/* Message counter */}
-              {!isAuthenticated ? (
-                <span className="text-xs text-blue-600 font-medium">
-                  {userMessageCount}/7 free messages used
-                </span>
-              ) : (
-                <span className="text-xs text-green-600 font-medium">
-                  {userMessageCount}/40 messages used
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-500">
-              Press Enter to send, Shift+Enter for new line
-            </p>
           </div>
         </div>
       </div>

@@ -5,17 +5,54 @@ import html2pdf from 'html2pdf.js';
 interface IframeRendererProps {
   htmlCode: string;
   height?: string;
+  onButtonClick?: (buttonText: string) => void;
 }
 
-export default function IframeRenderer({ htmlCode, height = '600px' }: IframeRendererProps) {
+export default function IframeRenderer({ htmlCode, height = '600px', onButtonClick }: IframeRendererProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeKey, setIframeKey] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const processingRef = useRef(false);
 
   useEffect(() => {
     // Force iframe refresh when htmlCode changes
     setIframeKey(prev => prev + 1);
+    // Reset processing state when new content arrives
+    setIsProcessing(false);
+    processingRef.current = false;
   }, [htmlCode]);
+
+  // Listen for messages from iframe
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'BUTTON_CLICK' && event.data?.buttonText) {
+        // Prevent multiple calls
+        if (processingRef.current) {
+          console.log('Already processing a request, ignoring duplicate click');
+          return;
+        }
+
+        processingRef.current = true;
+        setIsProcessing(true);
+        onButtonClick?.(event.data.buttonText);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [onButtonClick]);
+
+  // Send loading state to iframe
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (iframe?.contentWindow) {
+      iframe.contentWindow.postMessage({
+        type: 'SET_LOADING',
+        isLoading: isProcessing
+      }, '*');
+    }
+  }, [isProcessing]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -27,7 +64,76 @@ export default function IframeRenderer({ htmlCode, height = '600px' }: IframeRen
 
         if (iframeDoc) {
           iframeDoc.open();
-          iframeDoc.write(htmlCode);
+
+          // Inject script to handle button clicks
+          const scriptToInject = `
+            <script>
+              let isButtonProcessing = false;
+
+              // Listen for loading state from parent
+              window.addEventListener('message', function(event) {
+                if (event.data?.type === 'SET_LOADING') {
+                  isButtonProcessing = event.data.isLoading;
+                  updateButtonStates();
+                }
+              });
+
+              // Function to handle stage transition buttons
+              function handleStageButton(buttonText) {
+                if (isButtonProcessing) {
+                  console.log('Request already in progress');
+                  return;
+                }
+
+                isButtonProcessing = true;
+                updateButtonStates();
+                window.parent.postMessage({ type: 'BUTTON_CLICK', buttonText: buttonText }, '*');
+              }
+
+              // Update button states based on processing status
+              function updateButtonStates() {
+                const stageButtons = document.querySelectorAll('[data-stage-action]');
+                stageButtons.forEach(button => {
+                  if (isButtonProcessing) {
+                    button.disabled = true;
+                    button.style.opacity = '0.5';
+                    button.style.cursor = 'not-allowed';
+                    button.style.pointerEvents = 'none';
+                  } else {
+                    button.disabled = false;
+                    button.style.opacity = '1';
+                    button.style.cursor = 'pointer';
+                    button.style.pointerEvents = 'auto';
+                  }
+                });
+              }
+
+              // Auto-attach to buttons with data-stage-action attribute
+              document.addEventListener('DOMContentLoaded', function() {
+                const stageButtons = document.querySelectorAll('[data-stage-action]');
+                stageButtons.forEach(button => {
+                  button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const buttonText = this.getAttribute('data-stage-action') || this.textContent.trim();
+                    handleStageButton(buttonText);
+                  });
+                });
+              });
+            </script>
+          `;
+
+          // Insert the script before closing </body> tag or at the end
+          let modifiedHtml = htmlCode;
+          if (htmlCode.includes('</body>')) {
+            modifiedHtml = htmlCode.replace('</body>', scriptToInject + '</body>');
+          } else if (htmlCode.includes('</html>')) {
+            modifiedHtml = htmlCode.replace('</html>', scriptToInject + '</html>');
+          } else {
+            modifiedHtml = htmlCode + scriptToInject;
+          }
+
+          iframeDoc.write(modifiedHtml);
           iframeDoc.close();
         }
       } catch (error) {
@@ -95,7 +201,7 @@ export default function IframeRenderer({ htmlCode, height = '600px' }: IframeRen
   return (
     <>
       <div className="w-full mb-4">
-        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg shadow-lg border border-slate-200 overflow-hidden">
+        <div className="rounded-lg shadow-lg border border-slate-200 overflow-hidden">
           <div className="px-3 py-2 flex items-center justify-between flex-wrap gap-2 bg-white bg-opacity-50">
             <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
               <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -136,17 +242,18 @@ export default function IframeRenderer({ htmlCode, height = '600px' }: IframeRen
             </div>
           </div>
 
-          <div className="bg-slate-50">
+          <div>
             <iframe
               key={iframeKey}
               ref={iframeRef}
               sandbox="allow-scripts allow-same-origin"
-              className="w-full bg-slate-50"
+              className="w-full"
               style={{
-                height,
-                minHeight: '300px',
-                maxHeight: '800px',
-                border: 'none'
+                height: '80vh',
+                minHeight: '500px',
+                maxHeight: '90vh',
+                border: 'none',
+                background: 'transparent'
               }}
               title="Rendered HTML Output"
             />
@@ -168,14 +275,14 @@ export default function IframeRenderer({ htmlCode, height = '600px' }: IframeRen
             <X size={20} className="sm:w-6 sm:h-6" />
           </button>
 
-          <div className="w-full h-full max-w-[98vw] sm:max-w-[95vw] max-h-[95vh] bg-slate-50 rounded-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full h-full max-w-[98vw] sm:max-w-[95vw] max-h-[95vh] rounded-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="h-full w-full">
               <iframe
                 key={`fullscreen-${iframeKey}`}
                 srcDoc={htmlCode}
                 sandbox="allow-scripts allow-same-origin"
-                className="w-full h-full bg-slate-50"
-                style={{ border: 'none' }}
+                className="w-full h-full"
+                style={{ border: 'none', background: 'transparent' }}
                 title="Fullscreen HTML Output"
               />
             </div>
