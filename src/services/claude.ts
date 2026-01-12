@@ -271,11 +271,17 @@ export async function sendMessageStream(
     // Get system prompt from userRole and knowledgeBase
     const systemPrompt = getSystemPrompt();
 
-    // Make streaming API call to Claude
+    // Make streaming API call to Claude with cache_control
     const stream = await client.messages.stream({
       model: 'claude-sonnet-4-5-20250929',
       max_tokens: 16384,
-      system: systemPrompt || undefined,
+      system: systemPrompt ? [
+        {
+          type: "text",
+          text: systemPrompt,
+          cache_control: { type: "ephemeral" }
+        }
+      ] : undefined,
       messages: messages.map(msg => ({
         role: msg.role,
         content: typeof msg.content === 'string' ? msg.content : msg.content
@@ -332,11 +338,17 @@ export async function sendMessage(
     // Get system prompt from userRole and knowledgeBase
     const systemPrompt = getSystemPrompt();
 
-    // Make API call to Claude
+    // Make API call to Claude with cache_control
     const response = await client.messages.create({
       model: 'claude-sonnet-4-5-20250929',
       max_tokens: 16384,
-      system: systemPrompt || undefined, // Only include if not empty
+      system: systemPrompt ? [
+        {
+          type: "text",
+          text: systemPrompt,
+          cache_control: { type: "ephemeral" }
+        }
+      ] : undefined,
       messages: messages.map(msg => ({
         role: msg.role,
         content: typeof msg.content === 'string' ? msg.content : msg.content
