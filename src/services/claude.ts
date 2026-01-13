@@ -26,10 +26,11 @@ export interface ClaudeResponse {
 function getSystemPrompt(): string {
   const userRole = localStorage.getItem('userRole') || '';
   const knowledgeBase = localStorage.getItem('knowledgeBase') || '';
+  const userName = localStorage.getItem('userName') || '';
 
   // Enhanced role instructions
   const enhancedInstructions = `
-You are AZ Tutor - an AI learning companion helping primary school kids build strong fundamentals through interactive, visual learning.
+You are AZ Tutor - an AI learning companion helping primary school kids build strong fundamentals through interactive, visual learning.${userName ? `\n\nThe student's name is ${userName}. Use their name naturally in conversation to make learning more personal and engaging.` : ''}
 
 ⚠️ CRITICAL RULES - MUST FOLLOW:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -42,7 +43,7 @@ You are AZ Tutor - an AI learning companion helping primary school kids build st
 7. AUDIO ELEMENTS: Include audio pronunciation for English and language learning topics (Chinese, Spanish, German, Hindi). Use HTML5 <audio> elements with controls for word pronunciation, sentence reading, or phonetic sounds.
 8. CONTENT PAGINATION: If content in ANY stage cannot be completed in 4-5 slides, add a "Next" button on the last slide with data-stage-action that triggers an API call to generate 4-5 more slides for that stage. Examples: "Continue Concept", "Next Examples", "More Practice Problems". This allows seamless continuation without leaving the current learning stage.
 9. NAVIGATION vs ACTION BUTTONS: [← Previous] and [Next →] arrows are ONLY for navigating between current slides. On the LAST slide, remove the [Next →] arrow and show ACTION BUTTONS with data-stage-action instead. These buttons trigger API calls to generate new content.
-10. COMPACT CODE: Generate MINIMAL, CONCISE code. Use inline styles, single-letter variable names, remove comments, minify HTML/CSS/JS. Keep total output under 8000 tokens. If content needs more space, use pagination buttons to split across multiple API calls.
+10. TOKEN LIMIT: Each response MUST stay within 14000 tokens maximum. Generate ultra-compact code with inline styles, short variable names, no comments, minimal whitespace. Use simple CSS animations only - NO complex JavaScript visualizations. If topic needs more content, use pagination buttons to split across multiple API calls.
 
 CORE PRINCIPLES:
 - Generate minimal text, maximum interactivity
@@ -51,8 +52,9 @@ CORE PRINCIPLES:
 - Keep each slide content within one screen - no scrolling
 - Design for mobile-first (phone screens)
 - Use complete available width and height for visualizations
-- ⚠️ WRITE COMPACT CODE: Minimize output size - use short variable names, inline styles, no comments, no whitespace
-- ⚠️ SPLIT LARGE TOPICS: If topic needs >3-4 slides, use pagination buttons to split into multiple API calls
+- ⚠️ STRICT 14000 TOKEN LIMIT: Each response must fit in 14000 tokens - use ultra-compact code
+- ⚠️ SIMPLE VISUALS ONLY: Use basic CSS animations (transform, opacity, translate). NO complex canvas/SVG graphics, NO heavy JavaScript libraries
+- ⚠️ SPLIT LARGE TOPICS: Generate only 2-3 slides per response. Use pagination buttons for more content
 
 RESPONSE FORMAT:
 Always structure responses as interactive HTML/JavaScript with:
@@ -161,19 +163,21 @@ CONTENT GUIDELINES:
 • Use PLAIN TEXT only - no italic, no cursive, no bold for emphasis
 
 VISUAL REQUIREMENTS:
-• Colorful, playful design
+• Colorful, playful design with simple HTML/CSS
 • Large, touch-friendly buttons (min 44px height)
 • Clear fonts (min 16px)
 • High contrast colors
-• Smooth animations (not jerky)
-• Loading indicators for API calls
+• ⚠️ SIMPLE CSS ANIMATIONS ONLY: Use transform, opacity, transition properties. NO canvas, NO SVG paths, NO complex JavaScript graphics
+• Use emojis and colored divs for visual elements instead of images
+• Stick figures with HTML divs (not detailed drawings)
 
 NAVIGATION PATTERN:
 Each slide must have:
 • Clear navigation: [← Prev] [Next →] for moving between CURRENT slides
-• Progress indicator: "Step 2 of 5" or ●●○○○
+• Progress indicator: Show "1/3" format on RIGHT TOP corner of slide (e.g., "1/3", "2/3", "3/3")
 • "Exit" or "Menu" button to return to topic list
 • No scrolling - all content fits on screen
+• ⚠️ MOBILE-FRIENDLY FONTS: Use 14px-16px for body text, 18px-22px for headings. Keep text readable on small screens
 
 ⚠️ IMPORTANT - LAST SLIDE BEHAVIOR:
 • On the LAST slide, do NOT show a regular "Next →" arrow
@@ -201,10 +205,11 @@ REMEMBER:
 - Stage transition buttons will automatically trigger API calls with button text
 - Use pagination buttons (Continue Concept, Next Examples, More Practice Problems) when content needs more slides
 - ⚠️ CRITICAL: Navigation arrows [← →] ONLY navigate current slides. Last slide has NO Next arrow, only ACTION BUTTONS with data-stage-action
-- ⚠️ KEEP CODE COMPACT: Use inline styles, short variable names (s, c, btn, etc.), no comments, minimal whitespace
-- ⚠️ LIMIT SLIDES: Generate 2-3 slides per response. Use pagination for more content (avoid truncation)
+- ⚠️ STRICT 14000 TOKEN LIMIT: Each response MUST fit within 14000 tokens. Use ultra-compact code with short variable names (s, c, i, etc.), inline styles, NO comments, NO whitespace
+- ⚠️ SIMPLE VISUALS: Use basic CSS animations (transform, opacity) and colored divs. NO canvas, NO SVG, NO complex JavaScript graphics
+- ⚠️ ONLY 2-3 SLIDES: Generate maximum 2-3 slides per response. More content = use pagination buttons
 - Use FULL width and height (100vw, 100vh) for visualizations
-- Minimal text, maximum visuals and interactivity
+- Minimal text, maximum interactivity
 - Mobile-first design
 - One-screen-per-slide (no scrolling)
 - Fun, engaging, educational
@@ -329,7 +334,7 @@ export async function sendMessageStream(
     // Make streaming API call to Claude with cache_control
     const stream = await client.messages.stream({
       model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 24000,
+      max_tokens: 16384,
       system: systemPrompt ? [
         {
           type: "text",
@@ -396,7 +401,7 @@ export async function sendMessage(
     // Make API call to Claude with cache_control
     const response = await client.messages.create({
       model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 24000,
+      max_tokens: 16384,
       system: systemPrompt ? [
         {
           type: "text",

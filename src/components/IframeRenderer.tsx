@@ -6,9 +6,10 @@ interface IframeRendererProps {
   htmlCode: string;
   height?: string;
   onButtonClick?: (buttonText: string) => void;
+  topic?: string;
 }
 
-export default function IframeRenderer({ htmlCode, height = '600px', onButtonClick }: IframeRendererProps) {
+export default function IframeRenderer({ htmlCode, height = '600px', onButtonClick, topic }: IframeRendererProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeKey, setIframeKey] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -207,7 +208,7 @@ export default function IframeRenderer({ htmlCode, height = '600px', onButtonCli
               <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-              Interactive Visualization
+              {topic || 'Interactive Visualization'}
             </h4>
             <div className="flex items-center gap-1 sm:gap-2">
               <button
@@ -253,7 +254,7 @@ export default function IframeRenderer({ htmlCode, height = '600px', onButtonCli
                 minHeight: '500px',
                 maxHeight: '90vh',
                 border: 'none',
-                background: 'transparent'
+                background: '#fafafa'
               }}
               title="Rendered HTML Output"
             />
@@ -282,7 +283,7 @@ export default function IframeRenderer({ htmlCode, height = '600px', onButtonCli
                 srcDoc={htmlCode}
                 sandbox="allow-scripts allow-same-origin"
                 className="w-full h-full"
-                style={{ border: 'none', background: 'transparent' }}
+                style={{ border: 'none', background: '#fafafa' }}
                 title="Fullscreen HTML Output"
               />
             </div>

@@ -51,6 +51,8 @@ export default function Home() {
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
+  const [nameInput, setNameInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -132,9 +134,31 @@ export default function Home() {
   // Handle topic selection and start learning
   const handleTopicSelect = (topic: string) => {
     setSelectedTopic(topic);
+
+    // Check if user has entered name
+    const userName = localStorage.getItem('userName');
+    if (!userName) {
+      setShowNamePrompt(true);
+      return;
+    }
+
     // Auto-start the learning conversation
     const learningMessage = `I want to learn about ${topic} in ${selectedSubject}.`;
     handlePremadeQuestion(learningMessage);
+  };
+
+  // Handle name submission
+  const handleNameSubmit = () => {
+    if (nameInput.trim()) {
+      localStorage.setItem('userName', nameInput.trim());
+      setShowNamePrompt(false);
+
+      // Now start the learning conversation
+      if (selectedTopic && selectedSubject) {
+        const learningMessage = `I want to learn about ${selectedTopic} in ${selectedSubject}.`;
+        handlePremadeQuestion(learningMessage);
+      }
+    }
   };
 
   // Reset to subject selection
@@ -879,6 +903,7 @@ export default function Home() {
                             key={`html-${message.id}-${idx}`}
                             htmlCode={htmlCode}
                             onButtonClick={handleInteractiveButtonClick}
+                            topic={selectedTopic || undefined}
                           />
                         ))}
                       </div>
@@ -1072,6 +1097,51 @@ export default function Home() {
                 className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl"
               >
                 Go to Login
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Name Prompt */}
+      {showNamePrompt && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative animate-fade-in">
+            <div className="text-center">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-400 to-blue-600 flex items-center justify-center">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+
+              <h2 className="text-2xl font-bold text-slate-800 mb-2">
+                What's your name?
+              </h2>
+
+              <p className="text-slate-600 mb-6">
+                Let me know your name so I can make learning more personal and fun! 🎓
+              </p>
+
+              <input
+                type="text"
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && nameInput.trim()) {
+                    handleNameSubmit();
+                  }
+                }}
+                placeholder="Enter your name..."
+                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-blue-500 focus:outline-none mb-4 text-center text-lg"
+                autoFocus
+              />
+
+              <button
+                onClick={handleNameSubmit}
+                disabled={!nameInput.trim()}
+                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl"
+              >
+                Start Learning! 🚀
               </button>
             </div>
           </div>
