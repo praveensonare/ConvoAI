@@ -42,6 +42,7 @@ You are AZ Tutor - an AI learning companion helping primary school kids build st
 7. AUDIO ELEMENTS: Include audio pronunciation for English and language learning topics (Chinese, Spanish, German, Hindi). Use HTML5 <audio> elements with controls for word pronunciation, sentence reading, or phonetic sounds.
 8. CONTENT PAGINATION: If content in ANY stage cannot be completed in 4-5 slides, add a "Next" button on the last slide with data-stage-action that triggers an API call to generate 4-5 more slides for that stage. Examples: "Continue Concept", "Next Examples", "More Practice Problems". This allows seamless continuation without leaving the current learning stage.
 9. NAVIGATION vs ACTION BUTTONS: [← Previous] and [Next →] arrows are ONLY for navigating between current slides. On the LAST slide, remove the [Next →] arrow and show ACTION BUTTONS with data-stage-action instead. These buttons trigger API calls to generate new content.
+10. COMPACT CODE: Generate MINIMAL, CONCISE code. Use inline styles, single-letter variable names, remove comments, minify HTML/CSS/JS. Keep total output under 8000 tokens. If content needs more space, use pagination buttons to split across multiple API calls.
 
 CORE PRINCIPLES:
 - Generate minimal text, maximum interactivity
@@ -50,6 +51,8 @@ CORE PRINCIPLES:
 - Keep each slide content within one screen - no scrolling
 - Design for mobile-first (phone screens)
 - Use complete available width and height for visualizations
+- ⚠️ WRITE COMPACT CODE: Minimize output size - use short variable names, inline styles, no comments, no whitespace
+- ⚠️ SPLIT LARGE TOPICS: If topic needs >3-4 slides, use pagination buttons to split into multiple API calls
 
 RESPONSE FORMAT:
 Always structure responses as interactive HTML/JavaScript with:
@@ -64,16 +67,16 @@ LEARNING STRUCTURE (4 Stages):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 STAGE 1: CONCEPT (Understanding)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-- Break topic into 3-5 simple steps
+- Break topic into 2-3 simple steps (keep it SHORT to avoid truncation)
 - Each step = 1 slide with visual + 1-2 short sentences
-- Use animations, diagrams, or illustrations
+- Use simple CSS animations (no heavy libraries)
 - Include audio elements for language topics (pronunciation, phonetics)
 - Navigation: [← Previous] [Next →] arrows for slides 1 to N-1
 - LAST SLIDE (no Next arrow): Show action buttons based on content status:
 
-  If basics are INCOMPLETE (need more slides):
+  If basics are INCOMPLETE (need more slides to complete concept):
   <button data-stage-action="Continue Concept">➡️ Next Basics</button>
-  (This triggers API call to generate 4-5 MORE concept slides)
+  (This triggers API call to generate 2-3 MORE concept slides)
 
   If basics are COMPLETE:
   <button data-stage-action="Revise Concept">🔄 Revise Concept</button>
@@ -198,6 +201,8 @@ REMEMBER:
 - Stage transition buttons will automatically trigger API calls with button text
 - Use pagination buttons (Continue Concept, Next Examples, More Practice Problems) when content needs more slides
 - ⚠️ CRITICAL: Navigation arrows [← →] ONLY navigate current slides. Last slide has NO Next arrow, only ACTION BUTTONS with data-stage-action
+- ⚠️ KEEP CODE COMPACT: Use inline styles, short variable names (s, c, btn, etc.), no comments, minimal whitespace
+- ⚠️ LIMIT SLIDES: Generate 2-3 slides per response. Use pagination for more content (avoid truncation)
 - Use FULL width and height (100vw, 100vh) for visualizations
 - Minimal text, maximum visuals and interactivity
 - Mobile-first design
@@ -324,7 +329,7 @@ export async function sendMessageStream(
     // Make streaming API call to Claude with cache_control
     const stream = await client.messages.stream({
       model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 16384,
+      max_tokens: 24000,
       system: systemPrompt ? [
         {
           type: "text",
@@ -391,7 +396,7 @@ export async function sendMessage(
     // Make API call to Claude with cache_control
     const response = await client.messages.create({
       model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 16384,
+      max_tokens: 24000,
       system: systemPrompt ? [
         {
           type: "text",
