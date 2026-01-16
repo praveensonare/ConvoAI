@@ -51,6 +51,7 @@ export default function Home() {
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [selectedStage, setSelectedStage] = useState<string | null>(null);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -131,9 +132,15 @@ export default function Home() {
     setSelectedTopic(null);
   };
 
-  // Handle topic selection and start learning
+  // Handle topic selection - show stage buttons
   const handleTopicSelect = (topic: string) => {
     setSelectedTopic(topic);
+    setSelectedStage(null); // Reset stage selection
+  };
+
+  // Handle stage selection and start learning
+  const handleStageSelect = (stage: string) => {
+    setSelectedStage(stage);
 
     // Check if user has entered name
     const userName = localStorage.getItem('userName');
@@ -142,8 +149,27 @@ export default function Home() {
       return;
     }
 
-    // Auto-start the learning conversation
-    const learningMessage = `I want to learn about ${topic} in ${selectedSubject}.`;
+    // Start the learning conversation with selected stage
+    let learningMessage = '';
+    switch(stage) {
+      case 'Guided Learning':
+        learningMessage = `I want to learn about ${selectedTopic} in ${selectedSubject}. Start with the concept.`;
+        break;
+      case 'Concept':
+        learningMessage = `Teach me the concept of ${selectedTopic} in ${selectedSubject}.`;
+        break;
+      case 'Examples':
+        learningMessage = `Show me examples of ${selectedTopic} in ${selectedSubject}.`;
+        break;
+      case 'Practice':
+        learningMessage = `I want to practice ${selectedTopic} in ${selectedSubject}.`;
+        break;
+      case 'Quiz':
+        learningMessage = `Give me a quiz on ${selectedTopic} in ${selectedSubject}.`;
+        break;
+      default:
+        learningMessage = `I want to learn about ${selectedTopic} in ${selectedSubject}.`;
+    }
     handlePremadeQuestion(learningMessage);
   };
 
@@ -153,10 +179,9 @@ export default function Home() {
       localStorage.setItem('userName', nameInput.trim());
       setShowNamePrompt(false);
 
-      // Now start the learning conversation
-      if (selectedTopic && selectedSubject) {
-        const learningMessage = `I want to learn about ${selectedTopic} in ${selectedSubject}.`;
-        handlePremadeQuestion(learningMessage);
+      // Now start the learning conversation with selected stage
+      if (selectedTopic && selectedSubject && selectedStage) {
+        handleStageSelect(selectedStage);
       }
     }
   };
@@ -165,6 +190,13 @@ export default function Home() {
   const handleBackToSubjects = () => {
     setSelectedSubject(null);
     setSelectedTopic(null);
+    setSelectedStage(null);
+  };
+
+  // Reset to topic selection (from stage selection)
+  const handleBackToTopics = () => {
+    setSelectedTopic(null);
+    setSelectedStage(null);
   };
 
   // Load or create conversation on mount and when URL changes
@@ -179,6 +211,7 @@ export default function Home() {
       setMessages([]);
       setSelectedSubject(null);
       setSelectedTopic(null);
+      setSelectedStage(null);
       return;
     }
 
@@ -736,7 +769,7 @@ export default function Home() {
                   Hello! What would you like to learn today?
                 </p>
 
-                {/* Show Subject Selection or Topic Selection */}
+                {/* Show Subject Selection, Topic Selection, or Stage Selection */}
                 {!selectedSubject ? (
                   <div className="mt-8 w-full">
                     <h3 className="text-base sm:text-lg font-semibold text-slate-700 mb-4 sm:mb-6">
@@ -760,7 +793,7 @@ export default function Home() {
                       })}
                     </div>
                   </div>
-                ) : (
+                ) : !selectedTopic ? (
                   <div className="mt-8 w-full">
                     <div className="flex items-center justify-center gap-3 mb-4 sm:mb-6">
                       <button
@@ -792,6 +825,70 @@ export default function Home() {
                           </button>
                         );
                       })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-8 w-full">
+                    <div className="flex items-center justify-center gap-3 mb-4 sm:mb-6">
+                      <button
+                        onClick={handleBackToTopics}
+                        className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors"
+                      >
+                        <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Back to Topics
+                      </button>
+                    </div>
+                    <h3 className="text-base sm:text-lg font-semibold text-slate-700 mb-4 sm:mb-6">
+                      How would you like to learn {selectedTopic}?
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 max-w-4xl mx-auto">
+                      <button
+                        onClick={() => handleStageSelect('Guided Learning')}
+                        className="py-4 px-4 bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border-2 border-purple-300 rounded-xl text-center transition-all shadow-md hover:shadow-lg hover:scale-105"
+                        disabled={isLoading}
+                      >
+                        <div className="text-3xl mb-2">🎓</div>
+                        <span className="text-sm font-semibold text-slate-700 block">Guided Learning</span>
+                        <span className="text-xs text-slate-500 block mt-1">Start from basics</span>
+                      </button>
+                      <button
+                        onClick={() => handleStageSelect('Concept')}
+                        className="py-4 px-4 bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border-2 border-blue-300 rounded-xl text-center transition-all shadow-md hover:shadow-lg hover:scale-105"
+                        disabled={isLoading}
+                      >
+                        <div className="text-3xl mb-2">💡</div>
+                        <span className="text-sm font-semibold text-slate-700 block">Concept</span>
+                        <span className="text-xs text-slate-500 block mt-1">Learn the idea</span>
+                      </button>
+                      <button
+                        onClick={() => handleStageSelect('Examples')}
+                        className="py-4 px-4 bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 border-2 border-green-300 rounded-xl text-center transition-all shadow-md hover:shadow-lg hover:scale-105"
+                        disabled={isLoading}
+                      >
+                        <div className="text-3xl mb-2">📚</div>
+                        <span className="text-sm font-semibold text-slate-700 block">Examples</span>
+                        <span className="text-xs text-slate-500 block mt-1">See it in action</span>
+                      </button>
+                      <button
+                        onClick={() => handleStageSelect('Practice')}
+                        className="py-4 px-4 bg-gradient-to-br from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 border-2 border-orange-300 rounded-xl text-center transition-all shadow-md hover:shadow-lg hover:scale-105"
+                        disabled={isLoading}
+                      >
+                        <div className="text-3xl mb-2">✏️</div>
+                        <span className="text-sm font-semibold text-slate-700 block">Practice</span>
+                        <span className="text-xs text-slate-500 block mt-1">Try it yourself</span>
+                      </button>
+                      <button
+                        onClick={() => handleStageSelect('Quiz')}
+                        className="py-4 px-4 bg-gradient-to-br from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 border-2 border-red-300 rounded-xl text-center transition-all shadow-md hover:shadow-lg hover:scale-105"
+                        disabled={isLoading}
+                      >
+                        <div className="text-3xl mb-2">🎯</div>
+                        <span className="text-sm font-semibold text-slate-700 block">Quiz</span>
+                        <span className="text-xs text-slate-500 block mt-1">Test yourself</span>
+                      </button>
                     </div>
                   </div>
                 )}
