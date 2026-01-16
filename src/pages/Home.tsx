@@ -53,9 +53,12 @@ export default function Home() {
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [selectedStage, setSelectedStage] = useState<string | null>(null);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
+  const [showHomeworkInput, setShowHomeworkInput] = useState(false);
+  const [homeworkText, setHomeworkText] = useState('');
   const [nameInput, setNameInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const homeworkFileInputRef = useRef<HTMLInputElement>(null);
 
   // Get authentication status and message count
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
@@ -149,6 +152,12 @@ export default function Home() {
       return;
     }
 
+    // For Homework, show the homework input modal
+    if (stage === 'Homework') {
+      setShowHomeworkInput(true);
+      return;
+    }
+
     // Start the learning conversation with selected stage
     let learningMessage = '';
     switch(stage) {
@@ -183,6 +192,41 @@ export default function Home() {
       if (selectedTopic && selectedSubject && selectedStage) {
         handleStageSelect(selectedStage);
       }
+    }
+  };
+
+  // Handle homework file selection
+  const handleHomeworkFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check if file type is supported
+    if (!isFileTypeSupported(file)) {
+      alert(`File type not supported: ${file.name}`);
+      return;
+    }
+
+    try {
+      // Extract file content
+      const extractedData = await extractFileData(file);
+
+      // Start homework conversation with file content - be explicit about starting with problem 1
+      const homeworkMessage = `Help me with my ${selectedTopic} homework. Start explaining problem 1 now.\n\nHere are ALL the problems:\n${extractedData}\n\nExplain problem #1.`;
+      setShowHomeworkInput(false);
+      handlePremadeQuestion(homeworkMessage);
+    } catch (error) {
+      console.error('Error reading homework file:', error);
+      alert('Error reading file. Please try again.');
+    }
+  };
+
+  // Handle homework text submission
+  const handleHomeworkTextSubmit = () => {
+    if (homeworkText.trim()) {
+      const homeworkMessage = `Help me with my ${selectedTopic} homework. Start explaining problem 1 now.\n\nHere are ALL the problems:\n${homeworkText.trim()}\n\nExplain problem #1.`;
+      setShowHomeworkInput(false);
+      setHomeworkText('');
+      handlePremadeQuestion(homeworkMessage);
     }
   };
 
@@ -843,7 +887,7 @@ export default function Home() {
                     <h3 className="text-base sm:text-lg font-semibold text-slate-700 mb-4 sm:mb-6">
                       How would you like to learn {selectedTopic}?
                     </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 max-w-4xl mx-auto">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 max-w-5xl mx-auto">
                       <button
                         onClick={() => handleStageSelect('Guided Learning')}
                         className="py-4 px-4 bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border-2 border-purple-300 rounded-xl text-center transition-all shadow-md hover:shadow-lg hover:scale-105"
@@ -888,6 +932,15 @@ export default function Home() {
                         <div className="text-3xl mb-2">🎯</div>
                         <span className="text-sm font-semibold text-slate-700 block">Quiz</span>
                         <span className="text-xs text-slate-500 block mt-1">Test yourself</span>
+                      </button>
+                      <button
+                        onClick={() => handleStageSelect('Homework')}
+                        className="py-4 px-4 bg-gradient-to-br from-pink-50 to-pink-100 hover:from-pink-100 hover:to-pink-200 border-2 border-pink-300 rounded-xl text-center transition-all shadow-md hover:shadow-lg hover:scale-105"
+                        disabled={isLoading}
+                      >
+                        <div className="text-3xl mb-2">📝</div>
+                        <span className="text-sm font-semibold text-slate-700 block">Homework</span>
+                        <span className="text-xs text-slate-500 block mt-1">Get help</span>
                       </button>
                     </div>
                   </div>
@@ -1241,6 +1294,88 @@ export default function Home() {
                 Start Learning! 🚀
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Homework Input Modal */}
+      {showHomeworkInput && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 relative animate-fade-in">
+            <button
+              onClick={() => setShowHomeworkInput(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <X size={24} />
+            </button>
+
+            <div className="text-center mb-6">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-pink-400 to-purple-600 flex items-center justify-center">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+
+              <h2 className="text-2xl font-bold text-slate-800 mb-2">
+                Upload Your Homework
+              </h2>
+
+              <p className="text-slate-600 mb-4">
+                I'll help you solve each problem step by step! 📚
+              </p>
+            </div>
+
+            {/* File Upload Option */}
+            <div className="mb-6">
+              <input
+                type="file"
+                ref={homeworkFileInputRef}
+                onChange={handleHomeworkFileSelect}
+                className="hidden"
+                accept={getSupportedFileTypes()}
+              />
+              <button
+                onClick={() => homeworkFileInputRef.current?.click()}
+                className="w-full py-4 px-6 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                Upload Document or Image
+              </button>
+              <p className="text-xs text-slate-500 text-center mt-2">PDF, Word, Image, Excel, or Text files</p>
+            </div>
+
+            <div className="relative mb-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-white text-slate-500">OR</span>
+              </div>
+            </div>
+
+            {/* Text Input Option */}
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-slate-700 mb-2">Paste your homework questions:</label>
+              <textarea
+                value={homeworkText}
+                onChange={(e) => setHomeworkText(e.target.value)}
+                placeholder="Example:
+1. What is 5 + 3?
+2. Solve: 12 - 7 = ?
+3. Calculate: 4 × 6"
+                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-blue-500 focus:outline-none min-h-[150px] text-slate-800 placeholder:text-slate-400"
+              />
+            </div>
+
+            <button
+              onClick={handleHomeworkTextSubmit}
+              disabled={!homeworkText.trim()}
+              className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl"
+            >
+              Start Homework Help 🚀
+            </button>
           </div>
         </div>
       )}
