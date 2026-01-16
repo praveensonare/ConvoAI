@@ -210,8 +210,8 @@ export default function Home() {
       // Extract file content
       const extractedData = await extractFileData(file);
 
-      // Start homework conversation with file content
-      const homeworkMessage = `I need help with my homework on ${selectedTopic} in ${selectedSubject}. Here are the problems:\n\n${extractedData}`;
+      // Start homework conversation with file content - be explicit about starting with problem 1
+      const homeworkMessage = `Help me with my ${selectedTopic} homework. Start explaining problem 1 now.\n\nHere are ALL the problems:\n${extractedData}\n\nExplain problem #1.`;
       setShowHomeworkInput(false);
       handlePremadeQuestion(homeworkMessage);
     } catch (error) {
@@ -223,7 +223,7 @@ export default function Home() {
   // Handle homework text submission
   const handleHomeworkTextSubmit = () => {
     if (homeworkText.trim()) {
-      const homeworkMessage = `I need help with my homework on ${selectedTopic} in ${selectedSubject}. Here are the problems:\n\n${homeworkText.trim()}`;
+      const homeworkMessage = `Help me with my ${selectedTopic} homework. Start explaining problem 1 now.\n\nHere are ALL the problems:\n${homeworkText.trim()}\n\nExplain problem #1.`;
       setShowHomeworkInput(false);
       setHomeworkText('');
       handlePremadeQuestion(homeworkMessage);
