@@ -1,31 +1,23 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Brain, BookOpen, Settings, User, LogOut, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Home, Brain, BookOpen, Settings, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import ConversationList from './ConversationList';
 import { getCurrentConversationId } from '../services/conversationStorage';
-import { auth } from '../firebase';
-import { signOut } from 'firebase/auth';
 
 export default function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [currentConvId, setCurrentConvId] = useState<string | null>(
     getCurrentConversationId()
   );
   const navigate = useNavigate();
   const location = useLocation();
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
 
   const navItems = [
     { icon: Home, label: 'Home', path: '/' },
-    { icon: Brain, label: 'Role', path: '/role' },
-    { icon: BookOpen, label: 'Knowledge', path: '/kb' },
-    { icon: Settings, label: 'Settings', path: '/setting' },
   ];
 
   const handleNavigation = (path: string) => {
-    // If navigating to home, reset to welcome screen
     if (path === '/') {
       setCurrentConvId(null);
       navigate('/?welcome=true');
@@ -35,29 +27,15 @@ export default function Layout() {
     setIsSidebarOpen(false);
   };
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      localStorage.clear();
-      navigate('/login');
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  };
-
   const handleSelectConversation = (conversationId: string) => {
     setCurrentConvId(conversationId);
-    // Navigate to home with conversation ID in query param
     navigate(`/?conv=${conversationId}`);
-    // Close sidebar on mobile
     setIsSidebarOpen(false);
   };
 
   const handleNewConversation = () => {
     setCurrentConvId(null);
-    // Navigate to home without conversation ID to create new
     navigate('/?new=true');
-    // Close sidebar on mobile
     setIsSidebarOpen(false);
   };
 
@@ -88,13 +66,13 @@ export default function Layout() {
         <div className="flex-1 flex flex-col p-6">
           <div className="mb-8">
             <div className={`flex items-center gap-3 px-3 py-2 ${isSidebarCollapsed ? 'justify-center' : ''}`}>
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg flex-shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-lg flex-shrink-0">
                 <Brain className="text-white" size={24} />
               </div>
               {!isSidebarCollapsed && (
                 <div>
-                  <h1 className="text-xl font-bold text-slate-800">ConvoAI</h1>
-                  <p className="text-xs text-slate-500">Platform</p>
+                  <h1 className="text-xl font-bold text-slate-800">UOB ConvoAI</h1>
+                  <p className="text-xs text-slate-500">Retail Leadership</p>
                 </div>
               )}
             </div>
@@ -109,7 +87,7 @@ export default function Layout() {
                   onClick={() => handleNavigation(item.path)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                     isActive
-                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 scale-105'
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-600/30 scale-105'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:scale-102'
                   } ${isSidebarCollapsed ? 'justify-center' : ''}`}
                   title={isSidebarCollapsed ? item.label : ''}
@@ -136,65 +114,18 @@ export default function Layout() {
           )}
         </div>
 
-        <div className="p-4 border-t border-slate-200 relative">
-          {isAuthenticated ? (
-            <>
-              <button
-                onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-100 transition-all duration-200 ${
-                  isSidebarCollapsed ? 'justify-center' : ''
-                }`}
-                title={isSidebarCollapsed ? 'My Profile' : ''}
-              >
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-md flex-shrink-0">
-                  <User className="text-white" size={20} />
-                </div>
-                {!isSidebarCollapsed && (
-                  <div className="flex-1 text-left">
-                    <p className="font-medium text-slate-800">My Profile</p>
-                    <p className="text-xs text-slate-500">View & Manage</p>
-                  </div>
-                )}
-              </button>
-
-              {isProfileOpen && (
-                <div className={`absolute bottom-full mb-2 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden ${
-                  isSidebarCollapsed ? 'left-4' : 'left-4 right-4'
-                }`}>
-                  <button
-                    onClick={() => {
-                      handleNavigation('/profile');
-                      setIsProfileOpen(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors whitespace-nowrap"
-                  >
-                    <User size={18} className="text-slate-600" />
-                    <span className="text-slate-700 font-medium">Profile</span>
-                  </button>
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 transition-colors text-red-600 whitespace-nowrap"
-                  >
-                    <LogOut size={18} />
-                    <span className="font-medium">Logout</span>
-                  </button>
-                </div>
-              )}
-            </>
-          ) : (
-            <button
-              onClick={() => handleNavigation('/login')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg ${
-                isSidebarCollapsed ? 'justify-center' : ''
-              }`}
-              title={isSidebarCollapsed ? 'Login' : ''}
-            >
-              <User className="text-white" size={20} />
-              {!isSidebarCollapsed && (
-                <span className="font-medium">Login / Sign Up</span>
-              )}
-            </button>
-          )}
+        <div className="p-4 border-t border-slate-200">
+          <div className={`flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 ${isSidebarCollapsed ? 'justify-center' : ''}`}>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-xs font-bold">UOB</span>
+            </div>
+            {!isSidebarCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-slate-700 truncate">Retail Leadership</p>
+                <p className="text-xs text-slate-400">Conversational AI</p>
+              </div>
+            )}
+          </div>
         </div>
       </aside>
 

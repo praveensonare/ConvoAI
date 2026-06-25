@@ -1,13 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Send, Paperclip, X } from 'lucide-react';
-import { sendMessageStream, sendMessage, fileToBase64 } from '../services/claude';
+import { sendMessageStream, sendMessage } from '../services/claude';
 import MessageContent, { extractHtmlContent } from '../components/MessageContent';
 import IframeRenderer from '../components/IframeRenderer';
 import ImageViewer from '../components/ImageViewer';
 import DocumentViewer from '../components/DocumentViewer';
 import ErrorPopup from '../components/ErrorPopup';
-import WhatsAppPopup from '../components/WhatsAppPopup';
 import {
   createConversation,
   getConversation,
@@ -38,209 +37,83 @@ interface Message {
   isStreaming?: boolean;
 }
 
+// UOB Retail Leadership premade questions
+const premadeQuestions = [
+  {
+    category: 'Branch Operations',
+    questions: [
+      'How can I improve branch queue management and reduce customer wait times?',
+      'What are the best practices for branch staff scheduling during peak hours?',
+      'How do I optimize cash handling and vault management processes?',
+    ]
+  },
+  {
+    category: 'Customer Experience',
+    questions: [
+      'How can we enhance digital onboarding for new retail customers?',
+      'What strategies can improve customer retention in retail banking?',
+      'How do we measure and improve Net Promoter Score (NPS) at branch level?',
+    ]
+  },
+  {
+    category: 'Sales & Performance',
+    questions: [
+      'How can I coach my team to cross-sell wealth products effectively?',
+      'What KPIs should I track for branch sales performance?',
+      'How do I set realistic sales targets for my relationship managers?',
+    ]
+  },
+  {
+    category: 'Compliance & Risk',
+    questions: [
+      'What are the key AML red flags I should train my staff to watch for?',
+      'How do I ensure proper KYC documentation for new accounts?',
+      'What are the latest MAS guidelines for retail banking operations?',
+    ]
+  },
+  {
+    category: 'Team Leadership',
+    questions: [
+      'How can I motivate and retain high-performing branch staff?',
+      'What are effective one-on-one conversation frameworks for my team?',
+      'How do I handle underperforming team members constructively?',
+    ]
+  },
+  {
+    category: 'Digital Transformation',
+    questions: [
+      'How do we drive adoption of digital banking channels among elderly customers?',
+      'What is the right balance between digital and in-person service?',
+      'How can we use data analytics to personalize customer offerings?',
+    ]
+  },
+];
+
+const categoryColors: Record<string, string> = {
+  'Branch Operations': 'from-blue-50 to-blue-100 border-blue-300 hover:from-blue-100 hover:to-blue-200',
+  'Customer Experience': 'from-green-50 to-green-100 border-green-300 hover:from-green-100 hover:to-green-200',
+  'Sales & Performance': 'from-amber-50 to-amber-100 border-amber-300 hover:from-amber-100 hover:to-amber-200',
+  'Compliance & Risk': 'from-red-50 to-red-100 border-red-300 hover:from-red-100 hover:to-red-200',
+  'Team Leadership': 'from-purple-50 to-purple-100 border-purple-300 hover:from-purple-100 hover:to-purple-200',
+  'Digital Transformation': 'from-teal-50 to-teal-100 border-teal-300 hover:from-teal-100 hover:to-teal-200',
+};
+
 export default function Home() {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const [currentConversationId, setCurrentConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [showWhatsAppPopup, setShowWhatsAppPopup] = useState(false);
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
-  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
-  const [selectedStage, setSelectedStage] = useState<string | null>(null);
-  const [showNamePrompt, setShowNamePrompt] = useState(false);
-  const [showHomeworkInput, setShowHomeworkInput] = useState(false);
-  const [homeworkText, setHomeworkText] = useState('');
-  const [nameInput, setNameInput] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const homeworkFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Get authentication status and message count
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-  const userMessageCount = parseInt(localStorage.getItem('userMessageCount') || '0', 10);
-
-  // Get streaming setting from localStorage
   const isStreaming = localStorage.getItem('isStreaming') === 'true';
-
-  // Subject and topics data
-  const subjectsData: Record<string, string[]> = {
-    'Mathematics': ['Numbers', 'Addition', 'Subtraction', 'Multiplication', 'Division', 'Fractions', 'Decimals', 'Measurement', 'Shapes', 'Data'],
-    'Science': ['Animals', 'Plants', 'Human Body', 'Materials', 'Matter', 'Forces', 'Light', 'Sound', 'Space', 'Experiments'],
-    'English': ['Phonics', 'Reading', 'Vocabulary', 'Grammar', 'Punctuation', 'Writing', 'Speaking', 'Listening', 'Spelling', 'Poetry'],
-    'Chinese': ['Pinyin', 'Characters', 'Reading', 'Writing', 'Vocabulary', 'Grammar', 'Listening', 'Speaking', 'Culture', 'Stories'],
-    'Spanish': ['Alphabet', 'Vocabulary', 'Sentences', 'Verbs', 'Reading', 'Writing', 'Listening', 'Speaking', 'Culture', 'Stories'],
-    'German': ['Alphabet', 'Vocabulary', 'Articles', 'Sentences', 'Verbs', 'Reading', 'Writing', 'Listening', 'Speaking', 'Culture'],
-    'Hindi': ['Script', 'Reading', 'Writing', 'Vocabulary', 'Sentences', 'Grammar', 'Listening', 'Speaking', 'Stories', 'Culture'],
-    'History': ['Community', 'Civilizations', 'Figures', 'Events', 'Timelines', 'Changes', 'Royalty', 'Past Life', 'Sources', 'Heritage'],
-    'Geography': ['Maps', 'Continents', 'Countries', 'Features', 'Weather', 'Climate', 'Cities', 'Resources', 'Culture', 'Fieldwork'],
-    'Computing': ['Basics', 'Keyboard', 'Word Processing', 'Research', 'Safety', 'Coding', 'Content', 'Data', 'Presentations', 'Problems']
-  };
-
-  // Subject colors for buttons
-  const subjectColors: Record<string, { bg: string; hover: string; border: string; icon: string }> = {
-    'Mathematics': { bg: 'from-blue-50 to-blue-100', hover: 'hover:from-blue-100 hover:to-blue-200', border: 'border-blue-300', icon: 'bg-blue-500' },
-    'Science': { bg: 'from-green-50 to-green-100', hover: 'hover:from-green-100 hover:to-green-200', border: 'border-green-300', icon: 'bg-green-500' },
-    'English': { bg: 'from-purple-50 to-purple-100', hover: 'hover:from-purple-100 hover:to-purple-200', border: 'border-purple-300', icon: 'bg-purple-500' },
-    'Chinese': { bg: 'from-red-50 to-red-100', hover: 'hover:from-red-100 hover:to-red-200', border: 'border-red-300', icon: 'bg-red-500' },
-    'Spanish': { bg: 'from-yellow-50 to-yellow-100', hover: 'hover:from-yellow-100 hover:to-yellow-200', border: 'border-yellow-300', icon: 'bg-yellow-500' },
-    'German': { bg: 'from-gray-50 to-gray-100', hover: 'hover:from-gray-100 hover:to-gray-200', border: 'border-gray-300', icon: 'bg-gray-500' },
-    'Hindi': { bg: 'from-orange-50 to-orange-100', hover: 'hover:from-orange-100 hover:to-orange-200', border: 'border-orange-300', icon: 'bg-orange-500' },
-    'History': { bg: 'from-amber-50 to-amber-100', hover: 'hover:from-amber-100 hover:to-amber-200', border: 'border-amber-300', icon: 'bg-amber-500' },
-    'Geography': { bg: 'from-teal-50 to-teal-100', hover: 'hover:from-teal-100 hover:to-teal-200', border: 'border-teal-300', icon: 'bg-teal-500' },
-    'Computing': { bg: 'from-indigo-50 to-indigo-100', hover: 'hover:from-indigo-100 hover:to-indigo-200', border: 'border-indigo-300', icon: 'bg-indigo-500' }
-  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  // Check if user can send message based on message count and authentication
-  const canSendMessage = (): { canSend: boolean; reason?: string } => {
-    if (!isAuthenticated) {
-      // First 7 messages are free without login
-      if (userMessageCount >= 7) {
-        return { canSend: false, reason: 'login_required' };
-      }
-      return { canSend: true };
-    }
-
-    // After login, allow up to 40 messages
-    if (userMessageCount >= 40) {
-      return { canSend: false, reason: 'upgrade_required' };
-    }
-
-    return { canSend: true };
-  };
-
-  // Increment user message count
-  const incrementMessageCount = () => {
-    const count = parseInt(localStorage.getItem('userMessageCount') || '0', 10);
-    localStorage.setItem('userMessageCount', (count + 1).toString());
-  };
-
-  // Handle login redirect
-  const handleLoginRedirect = () => {
-    setShowLoginPrompt(false);
-    navigate('/login');
-  };
-
-  // Handle subject selection
-  const handleSubjectSelect = (subject: string) => {
-    setSelectedSubject(subject);
-    setSelectedTopic(null);
-  };
-
-  // Handle topic selection - show stage buttons
-  const handleTopicSelect = (topic: string) => {
-    setSelectedTopic(topic);
-    setSelectedStage(null); // Reset stage selection
-  };
-
-  // Handle stage selection and start learning
-  const handleStageSelect = (stage: string) => {
-    setSelectedStage(stage);
-
-    // Check if user has entered name
-    const userName = localStorage.getItem('userName');
-    if (!userName) {
-      setShowNamePrompt(true);
-      return;
-    }
-
-    // For Homework, show the homework input modal
-    if (stage === 'Homework') {
-      setShowHomeworkInput(true);
-      return;
-    }
-
-    // Start the learning conversation with selected stage
-    let learningMessage = '';
-    switch(stage) {
-      case 'Guided Learning':
-        learningMessage = `I want to learn about ${selectedTopic} in ${selectedSubject}. Start with the concept.`;
-        break;
-      case 'Concept':
-        learningMessage = `Teach me the concept of ${selectedTopic} in ${selectedSubject}.`;
-        break;
-      case 'Examples':
-        learningMessage = `Show me examples of ${selectedTopic} in ${selectedSubject}.`;
-        break;
-      case 'Practice':
-        learningMessage = `I want to practice ${selectedTopic} in ${selectedSubject}.`;
-        break;
-      case 'Quiz':
-        learningMessage = `Give me a quiz on ${selectedTopic} in ${selectedSubject}.`;
-        break;
-      default:
-        learningMessage = `I want to learn about ${selectedTopic} in ${selectedSubject}.`;
-    }
-    handlePremadeQuestion(learningMessage);
-  };
-
-  // Handle name submission
-  const handleNameSubmit = () => {
-    if (nameInput.trim()) {
-      localStorage.setItem('userName', nameInput.trim());
-      setShowNamePrompt(false);
-
-      // Now start the learning conversation with selected stage
-      if (selectedTopic && selectedSubject && selectedStage) {
-        handleStageSelect(selectedStage);
-      }
-    }
-  };
-
-  // Handle homework file selection
-  const handleHomeworkFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Check if file type is supported
-    if (!isFileTypeSupported(file)) {
-      alert(`File type not supported: ${file.name}`);
-      return;
-    }
-
-    try {
-      // Extract file content
-      const extractedData = await extractFileData(file);
-
-      // Start homework conversation with file content - be explicit about starting with problem 1
-      const homeworkMessage = `Help me with my ${selectedTopic} homework. Start explaining problem 1 now.\n\nHere are ALL the problems:\n${extractedData}\n\nExplain problem #1.`;
-      setShowHomeworkInput(false);
-      handlePremadeQuestion(homeworkMessage);
-    } catch (error) {
-      console.error('Error reading homework file:', error);
-      alert('Error reading file. Please try again.');
-    }
-  };
-
-  // Handle homework text submission
-  const handleHomeworkTextSubmit = () => {
-    if (homeworkText.trim()) {
-      const homeworkMessage = `Help me with my ${selectedTopic} homework. Start explaining problem 1 now.\n\nHere are ALL the problems:\n${homeworkText.trim()}\n\nExplain problem #1.`;
-      setShowHomeworkInput(false);
-      setHomeworkText('');
-      handlePremadeQuestion(homeworkMessage);
-    }
-  };
-
-  // Reset to subject selection
-  const handleBackToSubjects = () => {
-    setSelectedSubject(null);
-    setSelectedTopic(null);
-    setSelectedStage(null);
-  };
-
-  // Reset to topic selection (from stage selection)
-  const handleBackToTopics = () => {
-    setSelectedTopic(null);
-    setSelectedStage(null);
   };
 
   // Load or create conversation on mount and when URL changes
@@ -250,35 +123,28 @@ export default function Home() {
     const showWelcome = searchParams.get('welcome') === 'true';
 
     if (showWelcome) {
-      // Reset to welcome screen
       setCurrentConvId(null);
       setMessages([]);
-      setSelectedSubject(null);
-      setSelectedTopic(null);
-      setSelectedStage(null);
+      setSelectedCategory(null);
       return;
     }
 
     if (convIdFromUrl) {
-      // Load existing conversation
       const conversation = getConversation(convIdFromUrl);
       if (conversation) {
         setCurrentConvId(convIdFromUrl);
         setCurrentConversationId(convIdFromUrl);
         setMessages(conversation.messages);
       } else {
-        // Conversation not found, create new one
         const newConv = createConversation();
         setCurrentConvId(newConv.id);
         setMessages([]);
       }
     } else if (isNewConversation) {
-      // Explicitly creating a new conversation
       const newConv = createConversation();
       setCurrentConvId(newConv.id);
       setMessages([]);
     } else {
-      // Check if there's a current conversation in storage
       const storedConvId = getCurrentConversationId();
       if (storedConvId) {
         const conversation = getConversation(storedConvId);
@@ -286,13 +152,11 @@ export default function Home() {
           setCurrentConvId(storedConvId);
           setMessages(conversation.messages);
         } else {
-          // Create new conversation
           const newConv = createConversation();
           setCurrentConvId(newConv.id);
           setMessages([]);
         }
       } else {
-        // Create new conversation
         const newConv = createConversation();
         setCurrentConvId(newConv.id);
         setMessages([]);
@@ -320,7 +184,6 @@ export default function Home() {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
 
-      // Check if file type is supported
       if (!isFileTypeSupported(file)) {
         alert(`File type not supported: ${file.name}`);
         continue;
@@ -329,10 +192,8 @@ export default function Home() {
       const url = URL.createObjectURL(file);
 
       try {
-        // Extract file content
         const extractedData = await extractFileData(file);
 
-        // Determine attachment type
         let attachmentType: Attachment['type'] = 'document';
         if (file.type.startsWith('image/')) {
           attachmentType = 'image';
@@ -369,7 +230,6 @@ export default function Home() {
   const removeAttachment = (index: number) => {
     setAttachments((prev) => {
       const newAttachments = [...prev];
-      // Revoke object URL to free memory
       URL.revokeObjectURL(newAttachments[index].url);
       newAttachments.splice(index, 1);
       return newAttachments;
@@ -378,20 +238,6 @@ export default function Home() {
 
   const handleSend = async () => {
     if (!input.trim() && attachments.length === 0) return;
-
-    // Check if user can send message
-    const messageCheck = canSendMessage();
-    if (!messageCheck.canSend) {
-      if (messageCheck.reason === 'login_required') {
-        // Show login prompt for users who have sent 7 messages
-        setShowLoginPrompt(true);
-        return;
-      } else if (messageCheck.reason === 'upgrade_required') {
-        // Show WhatsApp popup for users who have sent 40 messages
-        setShowWhatsAppPopup(true);
-        return;
-      }
-    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -406,20 +252,12 @@ export default function Home() {
     setAttachments([]);
     setIsLoading(true);
 
-    // Increment message count
-    incrementMessageCount();
-
-    // Create placeholder for assistant message
     const assistantMessageId = (Date.now() + 1).toString();
 
     try {
-      // Convert messages to format expected by Claude API
       const conversationHistory = [...messages, userMessage].map(async (msg) => {
-        // If message has attachments, process them
         if (msg.attachments && msg.attachments.length > 0) {
           const contentParts: any[] = [];
-
-          // First, add extracted content from non-image files
           const extractedContents: string[] = [];
           for (const attachment of msg.attachments) {
             if (attachment.extractedContent && attachment.type !== 'image') {
@@ -427,7 +265,6 @@ export default function Home() {
             }
           }
 
-          // Combine user message with extracted file contents
           let messageText = msg.content;
           if (extractedContents.length > 0) {
             messageText = `${extractedContents.join('\n\n---\n\n')}\n\n${msg.content}`;
@@ -435,7 +272,6 @@ export default function Home() {
 
           contentParts.push({ type: 'text', text: messageText });
 
-          // Then, add images
           for (const attachment of msg.attachments) {
             if (attachment.type === 'image' && attachment.file) {
               try {
@@ -448,8 +284,6 @@ export default function Home() {
                     data: base64Data,
                   },
                 });
-
-                // Also add OCR extracted text if available
                 if (attachment.extractedContent) {
                   contentParts.push({
                     type: 'text',
@@ -477,7 +311,6 @@ export default function Home() {
       const resolvedHistory = await Promise.all(conversationHistory);
 
       if (isStreaming) {
-        // Streaming mode: Add placeholder and stream response
         setMessages((prev) => [
           ...prev,
           {
@@ -491,7 +324,6 @@ export default function Home() {
 
         await sendMessageStream(
           resolvedHistory,
-          // onChunk: Append text as it arrives
           (chunk: string) => {
             setMessages((prev) =>
               prev.map((msg) =>
@@ -501,7 +333,6 @@ export default function Home() {
               )
             );
           },
-          // onComplete: Mark streaming as complete
           () => {
             setMessages((prev) =>
               prev.map((msg) =>
@@ -512,9 +343,7 @@ export default function Home() {
             );
             setIsLoading(false);
           },
-          // onError: Display error popup
           (error: string) => {
-            // Remove the placeholder message
             setMessages((prev) =>
               prev.filter((msg) => msg.id !== assistantMessageId)
             );
@@ -523,11 +352,9 @@ export default function Home() {
           }
         );
       } else {
-        // Non-streaming mode: Wait for full response
         const response = await sendMessage(resolvedHistory);
 
         if (response.error) {
-          // Show error popup instead of inline message
           setIsLoading(false);
           setErrorMessage(response.error);
           return;
@@ -544,11 +371,10 @@ export default function Home() {
         setIsLoading(false);
       }
     } catch (error) {
-      // Handle any unexpected errors with popup
       setIsLoading(false);
       const errorMsg = error instanceof Error
         ? error.message
-        : 'An unexpected error occurred. Please contact praveen.sonare@vflowtech.com for support.';
+        : 'An unexpected error occurred. Please try again.';
       setErrorMessage(errorMsg);
     }
   };
@@ -566,19 +392,6 @@ export default function Home() {
 
   // Handle button clicks from interactive content
   const handleInteractiveButtonClick = (buttonText: string) => {
-    // Check if user can send message
-    const messageCheck = canSendMessage();
-    if (!messageCheck.canSend) {
-      if (messageCheck.reason === 'login_required') {
-        setShowLoginPrompt(true);
-        return;
-      } else if (messageCheck.reason === 'upgrade_required') {
-        setShowWhatsAppPopup(true);
-        return;
-      }
-    }
-
-    // Create user message with button text
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -589,13 +402,8 @@ export default function Home() {
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
-    // Increment message count
-    incrementMessageCount();
-
-    // Create placeholder for assistant message
     const assistantMessageId = (Date.now() + 1).toString();
 
-    // Prepare conversation history
     setTimeout(async () => {
       try {
         const conversationHistory: { role: 'user' | 'assistant'; content: string }[] = [
@@ -610,7 +418,6 @@ export default function Home() {
         ];
 
         if (isStreaming) {
-          // Streaming mode
           let streamedContent = '';
           const assistantMessage: Message = {
             id: assistantMessageId,
@@ -652,7 +459,6 @@ export default function Home() {
             }
           );
         } else {
-          // Non-streaming mode
           const response = await sendMessage(conversationHistory);
 
           if (response.error) {
@@ -675,27 +481,14 @@ export default function Home() {
         setIsLoading(false);
         const errorMsg = error instanceof Error
           ? error.message
-          : 'An unexpected error occurred. Please contact praveen.sonare@vflowtech.com for support.';
+          : 'An unexpected error occurred. Please try again.';
         setErrorMessage(errorMsg);
       }
     }, 0);
   };
 
   const handlePremadeQuestion = (question: string) => {
-    // Check if user can send message
-    const messageCheck = canSendMessage();
-    if (!messageCheck.canSend) {
-      if (messageCheck.reason === 'login_required') {
-        setShowLoginPrompt(true);
-        return;
-      } else if (messageCheck.reason === 'upgrade_required') {
-        setShowWhatsAppPopup(true);
-        return;
-      }
-    }
-
     setInput(question);
-    // Trigger send after input is set
     setTimeout(() => {
       const userMessage: Message = {
         id: Date.now().toString(),
@@ -708,20 +501,14 @@ export default function Home() {
       setInput('');
       setIsLoading(true);
 
-      // Increment message count
-      incrementMessageCount();
-
-      // Create placeholder for assistant message
       const assistantMessageId = (Date.now() + 1).toString();
 
-      // Convert messages to format expected by Claude API
       const conversationHistory = [...messages, userMessage].map((msg) => ({
         role: msg.role,
         content: msg.content,
       }));
 
       if (isStreaming) {
-        // Streaming mode
         setMessages((prev) => [
           ...prev,
           {
@@ -763,7 +550,6 @@ export default function Home() {
           }
         );
       } else {
-        // Non-streaming mode
         sendMessage(conversationHistory)
           .then((response) => {
             if (response.error) {
@@ -786,7 +572,7 @@ export default function Home() {
             setIsLoading(false);
             const errorMsg = error instanceof Error
               ? error.message
-              : 'An unexpected error occurred. Please contact praveen.sonare@vflowtech.com for support.';
+              : 'An unexpected error occurred. Please try again.';
             setErrorMessage(errorMsg);
           });
       }
@@ -800,82 +586,48 @@ export default function Home() {
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center space-y-6 max-w-4xl mx-auto px-4">
-                {/* AZ Tutor Header */}
-                <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 mx-auto rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-2xl">
+                {/* UOB Header */}
+                <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 mx-auto rounded-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center shadow-2xl">
                   <svg className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
                 </div>
                 <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800">
-                  I'm your AZ Tutor
+                  UOB Retail Leadership Assistant
                 </h1>
                 <p className="text-base sm:text-lg md:text-xl text-slate-600 px-4">
-                  Hello! What would you like to learn today?
+                  Hello! How can I help you with your branch operations today?
                 </p>
 
-                {/* Show Subject Selection, Topic Selection, or Stage Selection */}
-                {!selectedSubject ? (
+                {/* Premade Questions */}
+                {!selectedCategory ? (
                   <div className="mt-8 w-full">
                     <h3 className="text-base sm:text-lg font-semibold text-slate-700 mb-4 sm:mb-6">
-                      Choose a Subject
+                      Choose a Topic
                     </h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
-                      {Object.keys(subjectsData).map((subject) => {
-                        const colors = subjectColors[subject];
-                        return (
-                          <button
-                            key={subject}
-                            onClick={() => handleSubjectSelect(subject)}
-                            className={`py-3 px-2 sm:px-4 bg-gradient-to-br ${colors.bg} ${colors.hover} border-2 ${colors.border} rounded-xl text-center transition-all shadow-sm hover:shadow-md hover:scale-105`}
-                            disabled={isLoading}
-                          >
-                            <span className="text-xs sm:text-sm font-semibold text-slate-700 block">
-                              {subject}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : !selectedTopic ? (
-                  <div className="mt-8 w-full">
-                    <div className="flex items-center justify-center gap-3 mb-4 sm:mb-6">
-                      <button
-                        onClick={handleBackToSubjects}
-                        className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors"
-                      >
-                        <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                        Back to Subjects
-                      </button>
-                    </div>
-                    <h3 className="text-base sm:text-lg font-semibold text-slate-700 mb-4 sm:mb-6">
-                      Select a Topic in {selectedSubject}
-                    </h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
-                      {subjectsData[selectedSubject].map((topic) => {
-                        const colors = subjectColors[selectedSubject];
-                        return (
-                          <button
-                            key={topic}
-                            onClick={() => handleTopicSelect(topic)}
-                            className={`py-2.5 px-2 sm:px-3 bg-gradient-to-br ${colors.bg} ${colors.hover} border-2 ${colors.border} rounded-lg text-center transition-all shadow-sm hover:shadow-md hover:scale-105`}
-                            disabled={isLoading}
-                          >
-                            <span className="text-xs sm:text-sm font-medium text-slate-700 block leading-tight">
-                              {topic}
-                            </span>
-                          </button>
-                        );
-                      })}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                      {premadeQuestions.map((item) => (
+                        <button
+                          key={item.category}
+                          onClick={() => setSelectedCategory(item.category)}
+                          className={`py-4 px-4 bg-gradient-to-br ${categoryColors[item.category]} border-2 rounded-xl text-center transition-all shadow-sm hover:shadow-md hover:scale-105`}
+                          disabled={isLoading}
+                        >
+                          <span className="text-sm sm:text-base font-semibold text-slate-700 block">
+                            {item.category}
+                          </span>
+                          <span className="text-xs text-slate-500 block mt-1">
+                            {item.questions.length} questions
+                          </span>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 ) : (
                   <div className="mt-8 w-full">
                     <div className="flex items-center justify-center gap-3 mb-4 sm:mb-6">
                       <button
-                        onClick={handleBackToTopics}
+                        onClick={() => setSelectedCategory(null)}
                         className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors"
                       >
                         <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -885,63 +637,21 @@ export default function Home() {
                       </button>
                     </div>
                     <h3 className="text-base sm:text-lg font-semibold text-slate-700 mb-4 sm:mb-6">
-                      How would you like to learn {selectedTopic}?
+                      {selectedCategory}
                     </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 max-w-5xl mx-auto">
-                      <button
-                        onClick={() => handleStageSelect('Guided Learning')}
-                        className="py-4 px-4 bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border-2 border-purple-300 rounded-xl text-center transition-all shadow-md hover:shadow-lg hover:scale-105"
-                        disabled={isLoading}
-                      >
-                        <div className="text-3xl mb-2">🎓</div>
-                        <span className="text-sm font-semibold text-slate-700 block">Guided Learning</span>
-                        <span className="text-xs text-slate-500 block mt-1">Start from basics</span>
-                      </button>
-                      <button
-                        onClick={() => handleStageSelect('Concept')}
-                        className="py-4 px-4 bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border-2 border-blue-300 rounded-xl text-center transition-all shadow-md hover:shadow-lg hover:scale-105"
-                        disabled={isLoading}
-                      >
-                        <div className="text-3xl mb-2">💡</div>
-                        <span className="text-sm font-semibold text-slate-700 block">Concept</span>
-                        <span className="text-xs text-slate-500 block mt-1">Learn the idea</span>
-                      </button>
-                      <button
-                        onClick={() => handleStageSelect('Examples')}
-                        className="py-4 px-4 bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 border-2 border-green-300 rounded-xl text-center transition-all shadow-md hover:shadow-lg hover:scale-105"
-                        disabled={isLoading}
-                      >
-                        <div className="text-3xl mb-2">📚</div>
-                        <span className="text-sm font-semibold text-slate-700 block">Examples</span>
-                        <span className="text-xs text-slate-500 block mt-1">See it in action</span>
-                      </button>
-                      <button
-                        onClick={() => handleStageSelect('Practice')}
-                        className="py-4 px-4 bg-gradient-to-br from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 border-2 border-orange-300 rounded-xl text-center transition-all shadow-md hover:shadow-lg hover:scale-105"
-                        disabled={isLoading}
-                      >
-                        <div className="text-3xl mb-2">✏️</div>
-                        <span className="text-sm font-semibold text-slate-700 block">Practice</span>
-                        <span className="text-xs text-slate-500 block mt-1">Try it yourself</span>
-                      </button>
-                      <button
-                        onClick={() => handleStageSelect('Quiz')}
-                        className="py-4 px-4 bg-gradient-to-br from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 border-2 border-red-300 rounded-xl text-center transition-all shadow-md hover:shadow-lg hover:scale-105"
-                        disabled={isLoading}
-                      >
-                        <div className="text-3xl mb-2">🎯</div>
-                        <span className="text-sm font-semibold text-slate-700 block">Quiz</span>
-                        <span className="text-xs text-slate-500 block mt-1">Test yourself</span>
-                      </button>
-                      <button
-                        onClick={() => handleStageSelect('Homework')}
-                        className="py-4 px-4 bg-gradient-to-br from-pink-50 to-pink-100 hover:from-pink-100 hover:to-pink-200 border-2 border-pink-300 rounded-xl text-center transition-all shadow-md hover:shadow-lg hover:scale-105"
-                        disabled={isLoading}
-                      >
-                        <div className="text-3xl mb-2">📝</div>
-                        <span className="text-sm font-semibold text-slate-700 block">Homework</span>
-                        <span className="text-xs text-slate-500 block mt-1">Get help</span>
-                      </button>
+                    <div className="space-y-3 max-w-2xl mx-auto">
+                      {premadeQuestions
+                        .find((q) => q.category === selectedCategory)
+                        ?.questions.map((question, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handlePremadeQuestion(question)}
+                            className="w-full text-left py-3 px-4 bg-gradient-to-r from-slate-50 to-white border border-slate-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 transition-all shadow-sm hover:shadow-md"
+                            disabled={isLoading}
+                          >
+                            <span className="text-sm text-slate-700">{question}</span>
+                          </button>
+                        ))}
                     </div>
                   </div>
                 )}
@@ -956,7 +666,7 @@ export default function Home() {
 
                 return (
                   <div key={message.id} className="w-full">
-                    {/* Full-width attachments for assistant messages - shown before text */}
+                    {/* Full-width attachments for assistant messages */}
                     {message.role === 'assistant' && hasAttachments && (
                       <div className="w-full mb-4">
                         {message.attachments!.map((attachment, idx) => {
@@ -998,7 +708,7 @@ export default function Home() {
                       >
                         <div className="flex items-start gap-3">
                           {message.role === 'assistant' && (
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 mt-1 shadow-sm">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center flex-shrink-0 mt-1 shadow-sm">
                               <svg
                                 className="w-5 h-5 text-white"
                                 fill="currentColor"
@@ -1031,7 +741,7 @@ export default function Home() {
                             </p>
                           </div>
                           {message.role === 'user' && (
-                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center flex-shrink-0 mt-0.5">
                               <svg
                                 className="w-3 h-3 text-white"
                                 fill="currentColor"
@@ -1053,7 +763,7 @@ export default function Home() {
                             key={`html-${message.id}-${idx}`}
                             htmlCode={htmlCode}
                             onButtonClick={handleInteractiveButtonClick}
-                            topic={selectedTopic || undefined}
+                            topic={selectedCategory || undefined}
                           />
                         ))}
                       </div>
@@ -1062,13 +772,13 @@ export default function Home() {
                 );
               })}
 
-              {/* Loading indicator while AI is processing */}
+              {/* Loading indicator */}
               {isLoading && (
                 <div className="w-full">
                   <div className="flex justify-start mb-4">
                     <div className="max-w-[80%] rounded-2xl px-6 py-4 shadow-md bg-white border border-slate-200 text-slate-800">
                       <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 mt-1 shadow-sm">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center flex-shrink-0 mt-1 shadow-sm">
                           <svg
                             className="w-5 h-5 text-white"
                             fill="currentColor"
@@ -1189,7 +899,7 @@ export default function Home() {
               <button
                 onClick={handleSend}
                 disabled={(!input.trim() && attachments.length === 0) || isLoading}
-                className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg flex-shrink-0"
+                className="p-2 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg flex-shrink-0"
               >
                 <Send size={20} />
               </button>
@@ -1204,185 +914,6 @@ export default function Home() {
           message={errorMessage}
           onClose={() => setErrorMessage(null)}
         />
-      )}
-
-      {/* Login Prompt */}
-      {showLoginPrompt && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative animate-fade-in">
-            <button
-              onClick={() => setShowLoginPrompt(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
-            >
-              <X size={24} />
-            </button>
-
-            <div className="text-center">
-              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-
-              <h2 className="text-2xl font-bold text-slate-800 mb-2">
-                Login Required
-              </h2>
-
-              <p className="text-slate-600 mb-6">
-                You've used your 7 free messages! Please log in to continue chatting with ConvoAI and get 40 messages total.
-              </p>
-
-              <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-xl p-4 mb-6">
-                <p className="text-sm font-semibold text-green-800 mb-2">After Login:</p>
-                <ul className="text-xs text-green-700 space-y-1 text-left">
-                  <li>✓ 40 total free messages</li>
-                  <li>✓ Save your conversations</li>
-                  <li>✓ Access from any device</li>
-                  <li>✓ Personalized experience</li>
-                </ul>
-              </div>
-
-              <button
-                onClick={handleLoginRedirect}
-                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl"
-              >
-                Go to Login
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Name Prompt */}
-      {showNamePrompt && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative animate-fade-in">
-            <div className="text-center">
-              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-400 to-blue-600 flex items-center justify-center">
-                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-
-              <h2 className="text-2xl font-bold text-slate-800 mb-2">
-                What's your name?
-              </h2>
-
-              <p className="text-slate-600 mb-6">
-                Let me know your name so I can make learning more personal and fun! 🎓
-              </p>
-
-              <input
-                type="text"
-                value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && nameInput.trim()) {
-                    handleNameSubmit();
-                  }
-                }}
-                placeholder="Enter your name..."
-                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-blue-500 focus:outline-none mb-4 text-center text-lg"
-                autoFocus
-              />
-
-              <button
-                onClick={handleNameSubmit}
-                disabled={!nameInput.trim()}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl"
-              >
-                Start Learning! 🚀
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Homework Input Modal */}
-      {showHomeworkInput && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 relative animate-fade-in">
-            <button
-              onClick={() => setShowHomeworkInput(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
-            >
-              <X size={24} />
-            </button>
-
-            <div className="text-center mb-6">
-              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-pink-400 to-purple-600 flex items-center justify-center">
-                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-
-              <h2 className="text-2xl font-bold text-slate-800 mb-2">
-                Upload Your Homework
-              </h2>
-
-              <p className="text-slate-600 mb-4">
-                I'll help you solve each problem step by step! 📚
-              </p>
-            </div>
-
-            {/* File Upload Option */}
-            <div className="mb-6">
-              <input
-                type="file"
-                ref={homeworkFileInputRef}
-                onChange={handleHomeworkFileSelect}
-                className="hidden"
-                accept={getSupportedFileTypes()}
-              />
-              <button
-                onClick={() => homeworkFileInputRef.current?.click()}
-                className="w-full py-4 px-6 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                Upload Document or Image
-              </button>
-              <p className="text-xs text-slate-500 text-center mt-2">PDF, Word, Image, Excel, or Text files</p>
-            </div>
-
-            <div className="relative mb-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-slate-500">OR</span>
-              </div>
-            </div>
-
-            {/* Text Input Option */}
-            <div className="mb-4">
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Paste your homework questions:</label>
-              <textarea
-                value={homeworkText}
-                onChange={(e) => setHomeworkText(e.target.value)}
-                placeholder="Example:
-1. What is 5 + 3?
-2. Solve: 12 - 7 = ?
-3. Calculate: 4 × 6"
-                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-blue-500 focus:outline-none min-h-[150px] text-slate-800 placeholder:text-slate-400"
-              />
-            </div>
-
-            <button
-              onClick={handleHomeworkTextSubmit}
-              disabled={!homeworkText.trim()}
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl"
-            >
-              Start Homework Help 🚀
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* WhatsApp Popup for upgrade */}
-      {showWhatsAppPopup && (
-        <WhatsAppPopup onClose={() => setShowWhatsAppPopup(false)} />
       )}
     </div>
   );
