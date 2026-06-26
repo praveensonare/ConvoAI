@@ -59,7 +59,7 @@ ${knowledgeBase ? `\n\nADDITIONAL KNOWLEDGE:\n${knowledgeBase}` : ''}
 
 function normalizeMessages(messages: Message[]): { role: string; content: string }[] {
   const systemPrompt = getSystemPrompt();
-  const normalized = [];
+  const normalized: { role: string; content: string }[] = [];
 
   if (systemPrompt) {
     normalized.push({ role: 'system', content: systemPrompt });
