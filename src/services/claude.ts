@@ -23,7 +23,7 @@ export interface ClaudeResponse {
 function getSystemPrompt(): string {
   const knowledgeBase = localStorage.getItem('knowledgeBase') || '';
 
-  const systemPrompt = `You are UOB ConvoAI - an AI assistant for UOB Retail Leadership team. You help branch managers, relationship managers, and retail banking leaders with their day-to-day operations, strategic decisions, and team management.
+  const systemPrompt = `You are PulseAI - an AI assistant for UOB Retail Leadership team. You help branch managers, relationship managers, and retail banking leaders with their day-to-day operations, strategic decisions, and team management.
 
 CRITICAL RULES:
 1. NO EXPLANATIONS: Never explain what you're about to generate. START DIRECTLY with the content.
