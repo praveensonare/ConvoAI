@@ -178,6 +178,14 @@ export function setCurrentConversationId(id: string): void {
 }
 
 /**
+ * Delete all conversations
+ */
+export function clearAllConversations(): void {
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(CURRENT_CONVERSATION_KEY);
+}
+
+/**
  * Get sorted conversations (favorites first, then by updated date)
  */
 export function getSortedConversations(): Conversation[] {
