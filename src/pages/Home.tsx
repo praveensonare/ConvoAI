@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Send, Paperclip, X } from 'lucide-react';
 import { sendMessageStream, sendMessage } from '../services/api';
-import MessageContent, { extractHtmlContent } from '../components/MessageContent';
+import MessageContent, { extractHtmlContent, isRawHtml } from '../components/MessageContent';
 import IframeRenderer from '../components/IframeRenderer';
 import ImageViewer from '../components/ImageViewer';
 import DocumentViewer from '../components/DocumentViewer';
@@ -660,7 +660,11 @@ export default function Home() {
           ) : (
             <div className="space-y-6">
               {messages.map((message) => {
-                const htmlBlocks = extractHtmlContent(message.content);
+                let htmlBlocks = extractHtmlContent(message.content);
+                // If raw HTML document (not in code blocks), use the whole content
+                if (message.role === 'assistant' && isRawHtml(message.content)) {
+                  htmlBlocks = [message.content.trim()];
+                }
                 const hasHtml = htmlBlocks.length > 0;
                 const hasAttachments = message.attachments && message.attachments.length > 0;
 

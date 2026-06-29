@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8080/api/v1';
+const API_BASE_URL = 'http://localhost:8000/api/v1';
 
 export interface Message {
   role: 'user' | 'assistant';
@@ -80,12 +80,32 @@ function normalizeMessages(messages: Message[]): { role: string; content: string
   return normalized;
 }
 
+function getSessionId(): string {
+  let sessionId = localStorage.getItem('pulseai_session_id');
+  if (!sessionId) {
+    sessionId = crypto.randomUUID();
+    localStorage.setItem('pulseai_session_id', sessionId);
+  }
+  return sessionId;
+}
+
 export async function sendMessage(messages: Message[]): Promise<ApiResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/chat/completions`, {
+    const response = await fetch(`${API_BASE_URL}/v1/chat/completions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: normalizeMessages(messages) }),
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messages: normalizeMessages(messages),
+        model: 'default',
+        header_model: 'default',
+        stream: false,
+        temperature: 0,
+        max_tokens: 0,
+        session_id: getSessionId(),
+      }),
     });
 
     if (!response.ok) {
@@ -122,13 +142,21 @@ export async function sendMessageStream(
   onError: (error: string) => void
 ): Promise<void> {
   try {
-    const response = await fetch(`${API_BASE_URL}/chat/completions`, {
+    const response = await fetch(`${API_BASE_URL}/v1/chat/completions`, {
       method: 'POST',
       headers: {
+        'accept': 'application/json',
         'Content-Type': 'application/json',
-        Accept: 'text/event-stream',
       },
-      body: JSON.stringify({ messages: normalizeMessages(messages), stream: true }),
+      body: JSON.stringify({
+        messages: normalizeMessages(messages),
+        model: 'default',
+        header_model: 'default',
+        stream: true,
+        temperature: 0,
+        max_tokens: 0,
+        session_id: getSessionId(),
+      }),
     });
 
     if (!response.ok) {
