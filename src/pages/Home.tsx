@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Send, Paperclip, X } from 'lucide-react';
-import { sendMessageStream, sendMessage } from '../services/api';
+import { sendMessageStream, sendMessage, fileToBase64 } from '../services/api';
 import MessageContent, { extractHtmlContent, isRawHtml, isJavaScriptCode } from '../components/MessageContent';
 import IframeRenderer from '../components/IframeRenderer';
 import ImageViewer from '../components/ImageViewer';

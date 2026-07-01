@@ -5,7 +5,6 @@ import {
   toggleFavorite,
   deleteConversation,
   clearAllConversations,
-  getCurrentConversationId,
   type Conversation
 } from '../services/conversationStorage';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
