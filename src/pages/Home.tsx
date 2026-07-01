@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Send, Paperclip, X } from 'lucide-react';
 import { sendMessageStream, sendMessage } from '../services/api';
-import MessageContent, { extractHtmlContent, isRawHtml } from '../components/MessageContent';
+import MessageContent, { extractHtmlContent, isRawHtml, isJavaScriptCode } from '../components/MessageContent';
 import IframeRenderer from '../components/IframeRenderer';
 import ImageViewer from '../components/ImageViewer';
 import DocumentViewer from '../components/DocumentViewer';
@@ -667,6 +667,10 @@ export default function Home() {
                 }
                 const hasHtml = htmlBlocks.length > 0;
                 const hasAttachments = message.attachments && message.attachments.length > 0;
+                // Check if the entire content is raw HTML or standalone JS (to hide plain text display)
+                const isEntirelyInteractive = message.role === 'assistant' && (
+                  isRawHtml(message.content) || isJavaScriptCode(message.content)
+                );
 
                 return (
                   <div key={message.id} className="w-full">
@@ -697,67 +701,69 @@ export default function Home() {
                       </div>
                     )}
 
-                    {/* Text content in bubble */}
-                    <div
-                      className={`flex ${
-                        message.role === 'user' ? 'justify-end' : 'justify-start'
-                      } mb-3`}
-                    >
+                    {/* Text content in bubble - hidden for raw HTML/JS that renders as iframe */}
+                    {!(isEntirelyInteractive && hasHtml) && (
                       <div
-                        className={`max-w-[85%] rounded-xl px-4 py-3 shadow-sm ${
-                          message.role === 'user'
-                            ? 'bg-blue-50 border border-blue-200 text-slate-800'
-                            : 'bg-white border border-slate-200 text-slate-800'
-                        }`}
+                        className={`flex ${
+                          message.role === 'user' ? 'justify-end' : 'justify-start'
+                        } mb-3`}
                       >
-                        <div className="flex items-start gap-3">
-                          {message.role === 'assistant' && (
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center flex-shrink-0 mt-1 shadow-sm">
-                              <svg
-                                className="w-5 h-5 text-white"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
+                        <div
+                          className={`max-w-[85%] rounded-xl px-4 py-3 shadow-sm ${
+                            message.role === 'user'
+                              ? 'bg-blue-50 border border-blue-200 text-slate-800'
+                              : 'bg-white border border-slate-200 text-slate-800'
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            {message.role === 'assistant' && (
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center flex-shrink-0 mt-1 shadow-sm">
+                                <svg
+                                  className="w-5 h-5 text-white"
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
+                                  <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z" />
+                                </svg>
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className={`leading-snug ${message.role === 'user' ? 'text-sm font-normal' : 'text-sm'}`}>
+                                <MessageContent
+                                  content={message.content}
+                                  attachments={message.attachments}
+                                  role={message.role}
+                                />
+                                {message.isStreaming && (
+                                  <span className="inline-block w-2 h-4 bg-current animate-pulse ml-1" />
+                                )}
+                              </div>
+                              <p
+                                className={`text-xs mt-1.5 ${
+                                  message.role === 'user'
+                                    ? 'text-blue-600'
+                                    : 'text-slate-400'
+                                }`}
                               >
-                                <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
-                                <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z" />
-                              </svg>
+                                {message.timestamp.toLocaleTimeString()}
+                              </p>
                             </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className={`leading-snug ${message.role === 'user' ? 'text-sm font-normal' : 'text-sm'}`}>
-                              <MessageContent
-                                content={message.content}
-                                attachments={message.attachments}
-                                role={message.role}
-                              />
-                              {message.isStreaming && (
-                                <span className="inline-block w-2 h-4 bg-current animate-pulse ml-1" />
-                              )}
-                            </div>
-                            <p
-                              className={`text-xs mt-1.5 ${
-                                message.role === 'user'
-                                  ? 'text-blue-600'
-                                  : 'text-slate-400'
-                              }`}
-                            >
-                              {message.timestamp.toLocaleTimeString()}
-                            </p>
+                            {message.role === 'user' && (
+                              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <svg
+                                  className="w-3 h-3 text-white"
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                            )}
                           </div>
-                          {message.role === 'user' && (
-                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <svg
-                                className="w-3 h-3 text-white"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                              >
-                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                              </svg>
-                            </div>
-                          )}
                         </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Full-width HTML iframes for assistant messages */}
                     {message.role === 'assistant' && hasHtml && (

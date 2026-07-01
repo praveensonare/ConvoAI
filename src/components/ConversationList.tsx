@@ -4,6 +4,7 @@ import {
   getSortedConversations,
   toggleFavorite,
   deleteConversation,
+  clearAllConversations,
   getCurrentConversationId,
   type Conversation
 } from '../services/conversationStorage';
@@ -25,6 +26,7 @@ export default function ConversationList({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<Conversation | null>(null);
+  const [clearAllModalOpen, setClearAllModalOpen] = useState(false);
 
   // Load conversations
   const loadConversations = () => {
@@ -72,6 +74,13 @@ export default function ConversationList({
     setIsOpen(false);
   };
 
+  const handleClearAll = () => {
+    clearAllConversations();
+    loadConversations();
+    onNewConversation();
+    setClearAllModalOpen(false);
+  };
+
   const currentConv = conversations.find(c => c.id === currentConversationId);
 
   return (
@@ -116,6 +125,19 @@ export default function ConversationList({
                   New Conversation
                 </span>
               </button>
+
+              {/* Clear All Button */}
+              {conversations.length > 0 && (
+                <button
+                  onClick={() => setClearAllModalOpen(true)}
+                  className="w-full flex items-center gap-2 px-4 py-3 hover:bg-red-50 transition-colors border-b border-slate-200"
+                >
+                  <Trash2 size={18} className="text-red-500" />
+                  <span className="text-sm font-medium text-red-500">
+                    Clear All
+                  </span>
+                </button>
+              )}
 
               {/* Conversation List */}
               {conversations.length === 0 ? (
@@ -203,6 +225,14 @@ export default function ConversationList({
         conversationTitle={conversationToDelete?.title || ''}
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
+      />
+
+      {/* Clear All Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={clearAllModalOpen}
+        conversationTitle="all conversations"
+        onConfirm={handleClearAll}
+        onCancel={() => setClearAllModalOpen(false)}
       />
     </>
   );
